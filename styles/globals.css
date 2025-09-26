@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-dink-black text-dink-white font-sans antialiased;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff;
+    -webkit-box-shadow: 0 0 0px 1000px #111 inset;
+    box-shadow: 0 0 0px 1000px #111 inset;
+    caret-color: #b3ff00;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  ::selection {
+    background: #b3ff00;
+    color: #000;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dink-black;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dink-lime rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dink-lime-dark;
+  }
+}
+
+@layer components {
+  .court-pattern {
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 100px,
+        #B3FF0010 100px,
+        #B3FF0010 102px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 100px,
+        #B3FF0010 100px,
+        #B3FF0010 102px
+      );
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(179, 255, 0, 0.5);
+  }
+
+  .btn-athletic {
+    @apply relative overflow-hidden transition-all duration-300;
+  }
+
+  .btn-athletic::before {
+    content: "";
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 -translate-x-full;
+    transition: all 0.6s;
+  }
+
+  .btn-athletic:hover::before {
+    @apply opacity-20 translate-x-full;
+  }
+
+  .championship-badge {
+    @apply relative;
+  }
+
+  .championship-badge::after {
+    content: "★★★";
+    @apply absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-dink-lime text-xs;
+  }
+}
+
+@layer utilities {
+  .text-athletic {
+    @apply font-display uppercase tracking-wider;
+  }
+
+  @keyframes neon-pulse {
+    0%,
+    100% {
+      filter: brightness(1) drop-shadow(0 0 10px #B3FF00);
+    }
+    50% {
+      filter: brightness(1.2) drop-shadow(0 0 20px #B3FF00);
+    }
+  }
+
+  .neon-pulse {
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+
+  .spotlight-effect {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle 250px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 40%,
+      rgba(0, 0, 0, 0.8) 100%
+    );
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    will-change: background;
+  }
+
+  .spotlight-overlay {
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  @keyframes pulse-slow {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+}
