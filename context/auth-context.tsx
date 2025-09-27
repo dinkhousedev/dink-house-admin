@@ -112,6 +112,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       setLoading(true);
+
+      // Clear the session cookie first
+      const response = await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to clear session cookie");
+      }
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
 
       if (error) throw error;

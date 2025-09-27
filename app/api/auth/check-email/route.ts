@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { createClient } from "@/lib/supabase/server";
+
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
@@ -8,28 +10,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Try to query the allowed_emails table via REST API
-    const tableResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?email=eq.${encodeURIComponent(email.toLowerCase())}&is_active=eq.true`,
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+    const supabase = await createClient();
 
-    console.log("Response status:", tableResponse.status);
+    // Query the allowed_emails table in the app_auth schema
+    const { data, error } = await supabase
+      .from("allowed_emails")
+      .select("email, first_name, last_name, role, used_at")
+      .eq("email", email.toLowerCase())
+      .eq("is_active", true)
+      .single();
 
-    if (!tableResponse.ok) {
-      const errorText = await tableResponse.text();
+    if (error) {
+      console.error("Error checking allowed emails:", error);
 
-      console.error("Failed to check allowed emails:", errorText);
+      // Check if it's a "not found" error
+      if (error.code === "PGRST116") {
+        return NextResponse.json({
+          allowed: false,
+          message:
+            "This email is not authorized to sign up. Please contact your administrator.",
+        });
+      }
 
-      // For development, temporarily allow all emails
+      // For development, temporarily allow all emails on error
       if (process.env.NODE_ENV === "development") {
-        console.log("Development mode: allowing email", email);
+        console.log("Development mode (error fallback): allowing email");
 
         return NextResponse.json({
           allowed: true,
@@ -42,22 +47,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ allowed: false });
     }
 
-    const data = await tableResponse.json();
-
-    console.log("Allowed emails data:", data);
-
-    if (data && data.length > 0) {
-      const allowedEmail = data[0];
-
+    // Check if email has already been used
+    if (data.used_at) {
       return NextResponse.json({
-        allowed: true,
-        firstName: allowedEmail.first_name || null,
-        lastName: allowedEmail.last_name || null,
-        role: allowedEmail.role || "coach",
+        allowed: false,
+        message: "This email has already been used to create an account.",
       });
     }
 
-    return NextResponse.json({ allowed: false });
+    // Email is allowed and hasn't been used yet
+    return NextResponse.json({
+      allowed: true,
+      firstName: data.first_name || null,
+      lastName: data.last_name || null,
+      role: data.role || "coach",
+    });
   } catch (error) {
     console.error("Error checking email:", error);
 

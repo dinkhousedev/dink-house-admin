@@ -8,6 +8,8 @@ import { Link } from "@heroui/link";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 
+import { DinkHouseLogo } from "@/components/icons";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -43,7 +45,13 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user));
 
         // Redirect based on role
-        if (data.user.role === "admin" || data.user.role === "manager") {
+        const userRole = data.user?.profile?.role || data.user?.role;
+
+        if (
+          userRole === "super_admin" ||
+          userRole === "admin" ||
+          userRole === "manager"
+        ) {
           router.push("/");
         } else {
           router.push("/employee/dashboard");
@@ -63,7 +71,7 @@ export default function LoginPage() {
         <CardHeader className="flex-col gap-4 pb-0 pt-8">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-dink-gradient text-dink-black shadow-lg shadow-dink-lime/20">
-              <Icon icon="game-icons:tennis-ball" width={26} />
+              <DinkHouseLogo size={26} />
             </div>
             <div>
               <p className="text-athletic text-lg font-semibold text-dink-lime">

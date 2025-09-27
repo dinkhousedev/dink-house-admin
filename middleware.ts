@@ -3,23 +3,12 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Get session cookie
-  const sessionCookie = request.cookies.get("session");
+  // Get session token cookie
+  const sessionToken = request.cookies.get("session_token");
+  const refreshToken = request.cookies.get("refresh_token");
 
-  // Parse session if it exists
-  let session = null;
-
-  if (sessionCookie) {
-    try {
-      const decoded = Buffer.from(sessionCookie.value, "base64").toString();
-
-      session = JSON.parse(decoded);
-    } catch (e) {
-      console.error("Failed to parse session:", e);
-    }
-  }
-
-  const isAuthenticated = !!session;
+  // Check if authenticated
+  const isAuthenticated = !!(sessionToken?.value || refreshToken?.value);
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
@@ -45,9 +34,10 @@ export async function middleware(request: NextRequest) {
 
   // Redirect to appropriate dashboard if accessing auth pages while authenticated
   if (isAuthenticated && isPublicRoute) {
-    const role = session?.role || "employee";
+    const userRole = request.cookies.get("user_role");
+    const role = userRole?.value || "employee";
 
-    if (["admin", "manager"].includes(role)) {
+    if (["super_admin", "admin", "manager"].includes(role)) {
       return NextResponse.redirect(new URL("/", request.url));
     } else {
       return NextResponse.redirect(new URL("/employee/dashboard", request.url));
@@ -56,9 +46,10 @@ export async function middleware(request: NextRequest) {
 
   // Check role-based access for admin routes
   if (isAuthenticated && pathname.startsWith("/admin")) {
-    const role = session?.role || "employee";
+    const userRole = request.cookies.get("user_role");
+    const role = userRole?.value || "employee";
 
-    if (!["admin", "manager"].includes(role)) {
+    if (!["super_admin", "admin", "manager"].includes(role)) {
       return NextResponse.redirect(new URL("/employee/dashboard", request.url));
     }
   }
@@ -68,6 +59,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/data|_next/internal|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

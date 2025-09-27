@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getEvents, createEvent, getCourts } from "@/app/session_booking/actions";
+
+import {
+  getEvents,
+  createEvent,
+  getCourts,
+} from "@/app/dashboard/session_booking/actions";
 import { EventFormData } from "@/types/events";
 
 // GET /api/events - Fetch all events
@@ -11,26 +16,24 @@ export async function GET(request: NextRequest) {
 
     const result = await getEvents(
       startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined
+      endDate ? new Date(endDate) : undefined,
     );
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
       data: result.data,
-      count: result.data?.length || 0
+      count: result.data?.length || 0,
     });
   } catch (error) {
     console.error("API GET /events error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -44,13 +47,14 @@ export async function POST(request: NextRequest) {
     if (!body.title || !body.event_type) {
       return NextResponse.json(
         { error: "Title and event type are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Get courts if not provided
     if (!body.court_ids || body.court_ids.length === 0) {
       const courtsResult = await getCourts();
+
       if (courtsResult.success && courtsResult.data) {
         // Assign first available court
         body.court_ids = [courtsResult.data[0]?.id].filter(Boolean);
@@ -60,22 +64,23 @@ export async function POST(request: NextRequest) {
     const result = await createEvent(body);
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      message: "Event created successfully"
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: result.data,
+        message: "Event created successfully",
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("API POST /events error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

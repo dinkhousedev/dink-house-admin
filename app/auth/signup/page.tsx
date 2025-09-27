@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Link } from "@heroui/link";
 
 import { EmployeeRole } from "@/types/database";
+import { DinkHouseLogo } from "@/components/icons";
 
 const employeeRoles: {
   value: EmployeeRole;
@@ -72,7 +73,8 @@ export default function SignupPage() {
 
       if (!checkData.allowed) {
         setError(
-          "This email is not authorized to sign up. Please contact your administrator.",
+          checkData.message ||
+            "This email is not authorized to sign up. Please contact your administrator.",
         );
         setIsLoading(false);
 
@@ -156,7 +158,7 @@ export default function SignupPage() {
         <CardHeader className="flex-col gap-4 pb-0 pt-8">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-dink-gradient text-dink-black shadow-lg shadow-dink-lime/20">
-              <Icon icon="game-icons:tennis-ball" width={26} />
+              <DinkHouseLogo size={26} />
             </div>
             <div>
               <p className="text-athletic text-lg font-semibold text-dink-lime">

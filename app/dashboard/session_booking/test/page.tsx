@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card";
+import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Icon } from "@iconify/react";
 
 import {
@@ -21,7 +27,13 @@ import {
   getEventTemplates,
 } from "../actions";
 
-import { Event, EventFormData, Court, EventTemplate, EventType } from "@/types/events";
+import {
+  Event,
+  EventFormData,
+  Court,
+  EventTemplate,
+  EventType,
+} from "@/types/events";
 
 export default function EventsCRUDTestPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -57,12 +69,16 @@ export default function EventsCRUDTestPage() {
   }, []);
 
   const addTestResult = (result: string) => {
-    setTestResults((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${result}`]);
+    setTestResults((prev) => [
+      ...prev,
+      `[${new Date().toLocaleTimeString()}] ${result}`,
+    ]);
   };
 
   // GET: Load courts
   const loadCourts = async () => {
     const result = await getCourts();
+
     if (result.success) {
       setCourts(result.data || []);
       addTestResult(`✅ GET Courts: Loaded ${result.data?.length} courts`);
@@ -74,9 +90,12 @@ export default function EventsCRUDTestPage() {
   // GET: Load templates
   const loadTemplates = async () => {
     const result = await getEventTemplates();
+
     if (result.success) {
       setTemplates(result.data || []);
-      addTestResult(`✅ GET Templates: Loaded ${result.data?.length} templates`);
+      addTestResult(
+        `✅ GET Templates: Loaded ${result.data?.length} templates`,
+      );
     } else {
       addTestResult(`❌ GET Templates: ${result.error}`);
     }
@@ -91,7 +110,9 @@ export default function EventsCRUDTestPage() {
 
     if (result.success) {
       setEvents(result.data || []);
-      addTestResult(`✅ GET Events: Retrieved ${result.data?.length || 0} events`);
+      addTestResult(
+        `✅ GET Events: Retrieved ${result.data?.length || 0} events`,
+      );
     } else {
       addTestResult(`❌ GET Events: ${result.error}`);
     }
@@ -125,13 +146,15 @@ export default function EventsCRUDTestPage() {
     const eventData = {
       ...formData,
       title: `Test Event ${Date.now()}`,
-      court_ids: courts.slice(0, 2).map(c => c.id), // Use first 2 courts
+      court_ids: courts.slice(0, 2).map((c) => c.id), // Use first 2 courts
     };
 
     const result = await createEvent(eventData);
 
     if (result.success) {
-      addTestResult(`✅ POST Event: Created event "${result.data?.title}" with ID: ${result.data?.id}`);
+      addTestResult(
+        `✅ POST Event: Created event "${result.data?.title}" with ID: ${result.data?.id}`,
+      );
       await testGetEvents(); // Refresh list
     } else {
       addTestResult(`❌ POST Event: ${result.error}`);
@@ -213,11 +236,13 @@ export default function EventsCRUDTestPage() {
     const createResult = await createEvent({
       ...formData,
       title: `Automated Test ${Date.now()}`,
-      court_ids: courts.slice(0, 1).map(c => c.id),
+      court_ids: courts.slice(0, 1).map((c) => c.id),
     });
 
     if (createResult.success && createResult.data) {
-      addTestResult(`✅ POST: Created test event with ID: ${createResult.data.id}`);
+      addTestResult(
+        `✅ POST: Created test event with ID: ${createResult.data.id}`,
+      );
 
       // Test GET single
       await testGetSingleEvent(createResult.data.id);
@@ -242,7 +267,9 @@ export default function EventsCRUDTestPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <Card className="border border-dink-gray bg-black/40">
         <CardHeader>
-          <h1 className="text-2xl font-bold text-dink-white">Event CRUD Operations Test</h1>
+          <h1 className="text-2xl font-bold text-dink-white">
+            Event CRUD Operations Test
+          </h1>
         </CardHeader>
 
         <CardBody className="space-y-6">
@@ -250,31 +277,28 @@ export default function EventsCRUDTestPage() {
           <div className="flex gap-2 flex-wrap">
             <Button
               color="primary"
+              isLoading={loading}
               startContent={<Icon icon="solar:play-linear" />}
               onPress={runAllTests}
-              isLoading={loading}
             >
               Run All Tests
             </Button>
             <Button
-              variant="flat"
               startContent={<Icon icon="solar:refresh-linear" />}
+              variant="flat"
               onPress={testGetEvents}
             >
               GET All
             </Button>
             <Button
-              variant="flat"
               color="success"
               startContent={<Icon icon="solar:add-circle-linear" />}
+              variant="flat"
               onPress={() => setIsCreateModalOpen(true)}
             >
               POST (Create)
             </Button>
-            <Button
-              variant="flat"
-              onPress={() => setTestResults([])}
-            >
+            <Button variant="flat" onPress={() => setTestResults([])}>
               Clear Logs
             </Button>
           </div>
@@ -283,24 +307,36 @@ export default function EventsCRUDTestPage() {
 
           {/* Events List */}
           <div>
-            <h2 className="text-lg font-semibold text-dink-white mb-3">Events ({events.length})</h2>
+            <h2 className="text-lg font-semibold text-dink-white mb-3">
+              Events ({events.length})
+            </h2>
             <div className="space-y-2 max-h-96 overflow-auto">
               {events.map((event) => (
-                <Card key={event.id} className="bg-black/20 border border-dink-gray/30">
+                <Card
+                  key={event.id}
+                  className="bg-black/20 border border-dink-gray/30"
+                >
                   <CardBody>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-dink-white">{event.title}</h3>
+                        <h3 className="font-semibold text-dink-white">
+                          {event.title}
+                        </h3>
                         <div className="flex gap-2 mt-1">
-                          <Chip size="sm" color="primary">{event.event_type}</Chip>
+                          <Chip color="primary" size="sm">
+                            {event.event_type}
+                          </Chip>
                           <Chip size="sm" variant="flat">
                             {new Date(event.start_time).toLocaleDateString()}
                           </Chip>
                           <Chip size="sm" variant="flat">
-                            {event.current_registrations || 0}/{event.max_capacity}
+                            {event.current_registrations || 0}/
+                            {event.max_capacity}
                           </Chip>
                           {event.is_cancelled && (
-                            <Chip size="sm" color="danger">Cancelled</Chip>
+                            <Chip color="danger" size="sm">
+                              Cancelled
+                            </Chip>
                           )}
                         </div>
                       </div>
@@ -314,9 +350,9 @@ export default function EventsCRUDTestPage() {
                           GET
                         </Button>
                         <Button
+                          color="warning"
                           size="sm"
                           variant="flat"
-                          color="warning"
                           onPress={() => {
                             setSelectedEvent(event);
                             setIsEditModalOpen(true);
@@ -332,9 +368,9 @@ export default function EventsCRUDTestPage() {
                           Cancel
                         </Button>
                         <Button
+                          color="danger"
                           size="sm"
                           variant="flat"
-                          color="danger"
                           onPress={() => testDeleteEvent(event.id)}
                         >
                           DELETE
@@ -351,7 +387,9 @@ export default function EventsCRUDTestPage() {
 
           {/* Test Results Log */}
           <div>
-            <h2 className="text-lg font-semibold text-dink-white mb-3">Test Results Log</h2>
+            <h2 className="text-lg font-semibold text-dink-white mb-3">
+              Test Results Log
+            </h2>
             <Card className="bg-black/60 border border-dink-gray/30">
               <CardBody>
                 <div className="font-mono text-xs space-y-1 max-h-64 overflow-auto">
@@ -361,7 +399,9 @@ export default function EventsCRUDTestPage() {
                     </div>
                   ))}
                   {testResults.length === 0 && (
-                    <div className="text-default-400">No tests run yet. Click "Run All Tests" to start.</div>
+                    <div className="text-default-400">
+                      No tests run yet. Click "Run All Tests" to start.
+                    </div>
                   )}
                 </div>
               </CardBody>
@@ -373,7 +413,9 @@ export default function EventsCRUDTestPage() {
             <>
               <Divider />
               <div>
-                <h2 className="text-lg font-semibold text-dink-white mb-3">Selected Event Details</h2>
+                <h2 className="text-lg font-semibold text-dink-white mb-3">
+                  Selected Event Details
+                </h2>
                 <Card className="bg-black/20 border border-dink-lime/30">
                   <CardBody>
                     <pre className="text-xs text-default-500 overflow-auto">
@@ -388,7 +430,11 @@ export default function EventsCRUDTestPage() {
       </Card>
 
       {/* Create Modal */}
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} size="2xl">
+      <Modal
+        isOpen={isCreateModalOpen}
+        size="2xl"
+        onClose={() => setIsCreateModalOpen(false)}
+      >
         <ModalContent>
           <ModalHeader>Create New Event (POST)</ModalHeader>
           <ModalBody>
@@ -396,13 +442,18 @@ export default function EventsCRUDTestPage() {
               <Input
                 label="Title"
                 value={formData.title}
-                onValueChange={(value) => setFormData({ ...formData, title: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, title: value })
+                }
               />
               <Select
                 label="Event Type"
                 selectedKeys={[formData.event_type]}
                 onSelectionChange={(keys) =>
-                  setFormData({ ...formData, event_type: Array.from(keys)[0] as EventType })
+                  setFormData({
+                    ...formData,
+                    event_type: Array.from(keys)[0] as EventType,
+                  })
                 }
               >
                 <SelectItem key="scramble">Scramble</SelectItem>
@@ -416,7 +467,10 @@ export default function EventsCRUDTestPage() {
                   type="number"
                   value={formData.max_capacity.toString()}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, max_capacity: parseInt(value) || 16 })
+                    setFormData({
+                      ...formData,
+                      max_capacity: parseInt(value) || 16,
+                    })
                   }
                 />
                 <Input
@@ -424,7 +478,10 @@ export default function EventsCRUDTestPage() {
                   type="number"
                   value={formData.min_capacity.toString()}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, min_capacity: parseInt(value) || 4 })
+                    setFormData({
+                      ...formData,
+                      min_capacity: parseInt(value) || 4,
+                    })
                   }
                 />
               </div>
@@ -442,25 +499,32 @@ export default function EventsCRUDTestPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} size="2xl">
+      <Modal
+        isOpen={isEditModalOpen}
+        size="2xl"
+        onClose={() => setIsEditModalOpen(false)}
+      >
         <ModalContent>
           <ModalHeader>Update Event (PUT)</ModalHeader>
           <ModalBody>
             {selectedEvent && (
               <div className="space-y-4">
                 <Input
-                  label="Title"
                   defaultValue={selectedEvent.title}
+                  label="Title"
                   onValueChange={(value) =>
                     setSelectedEvent({ ...selectedEvent, title: value })
                   }
                 />
                 <Input
+                  defaultValue={selectedEvent.max_capacity.toString()}
                   label="Max Capacity"
                   type="number"
-                  defaultValue={selectedEvent.max_capacity.toString()}
                   onValueChange={(value) =>
-                    setSelectedEvent({ ...selectedEvent, max_capacity: parseInt(value) || 16 })
+                    setSelectedEvent({
+                      ...selectedEvent,
+                      max_capacity: parseInt(value) || 16,
+                    })
                   }
                 />
               </div>

@@ -1,12 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase =
+  supabaseUrl && serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false },
+      })
+    : null;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, password } = body;
+    if (!supabase) {
+      console.error("Supabase service client is not configured");
 
-    // Basic validation
+      return NextResponse.json(
+        { error: "Authentication service is unavailable" },
+        { status: 500 },
+      );
+    }
+
+    const { email, password } = await request.json();
+
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
@@ -14,52 +32,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For development, accept any password for authorized emails
-    // In production, you'd verify against stored hash
+    const { data, error } = await supabase.schema("api").rpc("login", {
+      email,
+      password,
+    });
 
-    // Check if email is in allowed_emails
-    const checkResponse = await fetch(
-      `${request.nextUrl.origin}/api/auth/check-email`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      },
-    );
+    if (error) {
+      console.error("Login RPC error:", error);
 
-    const checkData = await checkResponse.json();
-
-    if (!checkData.allowed) {
       return NextResponse.json(
-        { error: "Invalid email or password" },
+        { error: error.message ?? "Invalid credentials" },
         { status: 401 },
       );
     }
 
-    // Create session
-    const sessionToken = Buffer.from(
-      JSON.stringify({
-        email,
-        role: checkData.role || "admin",
-        firstName: checkData.firstName || email.split("@")[0].split(".")[0],
-        lastName: checkData.lastName || email.split("@")[0].split(".")[1] || "",
-        timestamp: Date.now(),
-      }),
-    ).toString("base64");
+    if (!data?.success) {
+      return NextResponse.json(
+        { error: data?.error ?? "Invalid credentials" },
+        { status: 401 },
+      );
+    }
 
-    const userData = {
-      id: crypto.randomUUID(),
-      email,
-      first_name: checkData.firstName || "Tim",
-      last_name: checkData.lastName || "Carrender",
-      role: checkData.role || "admin",
-      status: "active",
-    };
-
-    // Set session cookie
     const cookieStore = await cookies();
 
-    cookieStore.set("session", sessionToken, {
+    cookieStore.set("session_token", data.session_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: "/",
+    });
+
+    cookieStore.set("refresh_token", data.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -67,9 +71,21 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
+    // Store user info for middleware access
+    const userRole = data.user?.profile?.role || data.user?.role || "employee";
+
+    cookieStore.set("user_role", userRole, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: "/",
+    });
+
     return NextResponse.json({
       success: true,
-      user: userData,
+      user: data.user,
+      expires_at: data.expires_at,
       message: "Logged in successfully",
     });
   } catch (error) {

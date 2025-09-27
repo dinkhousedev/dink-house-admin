@@ -9,6 +9,7 @@ import { Progress } from "@heroui/progress";
 import { Icon } from "@iconify/react";
 import { useRouter } from "next/navigation";
 
+import { useAuth } from "@/context/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { Employee, EmployeeProfile } from "@/types/database";
 
@@ -59,12 +60,7 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    const supabase = createClient();
-
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-  };
+  const { signOut } = useAuth();
 
   if (loading) {
     return (
@@ -88,7 +84,7 @@ export default function EmployeeDashboard() {
               className="mt-4"
               color="primary"
               radius="lg"
-              onClick={handleSignOut}
+              onClick={signOut}
             >
               Return to Login
             </Button>
@@ -125,7 +121,7 @@ export default function EmployeeDashboard() {
             radius="lg"
             startContent={<Icon icon="solar:logout-2-linear" width={20} />}
             variant="light"
-            onClick={handleSignOut}
+            onClick={signOut}
           >
             Sign Out
           </Button>

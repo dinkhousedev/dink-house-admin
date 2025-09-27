@@ -1,174 +1,308 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-// GET all allowed emails
-export async function GET() {
+import { createClient } from "@/lib/supabase/server";
+
+// GET - List all allowed emails
+export async function GET(request: NextRequest) {
   try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?order=created_at.desc`,
-      {
-        headers: {
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-          Prefer: "return=representation",
-        },
-      },
-    );
+    // Check if user is authenticated and is admin
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch allowed emails");
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: "Unauthorized - No session" },
+        { status: 401 },
+      );
     }
 
-    const data = await response.json();
+    // Decode session to check role
+    const sessionData = JSON.parse(
+      Buffer.from(sessionCookie.value, "base64").toString(),
+    );
 
-    return NextResponse.json(data);
+    if (sessionData.role !== "admin" && sessionData.role !== "manager") {
+      return NextResponse.json(
+        { error: "Forbidden - Admin or Manager access required" },
+        { status: 403 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Get all allowed emails
+    const { data, error } = await supabase
+      .from("allowed_emails")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching allowed emails:", error);
+
+      return NextResponse.json(
+        { error: "Failed to fetch allowed emails" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data || [],
+      count: data?.length || 0,
+    });
   } catch (error) {
-    console.error("Error fetching allowed emails:", error);
+    console.error("Error in GET /api/admin/allowed-emails:", error);
 
     return NextResponse.json(
-      { error: "Failed to fetch allowed emails" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
 }
 
-// POST new allowed email
+// POST - Add new allowed email
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Check if user is authenticated and is admin
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          email: body.email.toLowerCase(),
-          first_name: body.first_name || null,
-          last_name: body.last_name || null,
-          role: body.role || "viewer",
-          notes: body.notes || null,
-          is_active: true,
-        }),
-      },
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: "Unauthorized - No session" },
+        { status: 401 },
+      );
+    }
+
+    // Decode session to check role
+    const sessionData = JSON.parse(
+      Buffer.from(sessionCookie.value, "base64").toString(),
     );
 
-    if (!response.ok) {
-      const error = await response.text();
+    if (sessionData.role !== "admin" && sessionData.role !== "manager") {
+      return NextResponse.json(
+        { error: "Forbidden - Admin or Manager access required" },
+        { status: 403 },
+      );
+    }
 
-      console.error("Supabase error:", error);
+    const body = await request.json();
+    const { email, firstName, lastName, role, notes } = body;
 
-      // Check if it's a duplicate email error
-      if (error.includes("duplicate") || error.includes("unique")) {
+    // Validate required fields
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 },
+      );
+    }
+
+    // Validate role if provided
+    const validRoles = ["admin", "manager", "coach", "viewer"];
+
+    if (role && !validRoles.includes(role)) {
+      return NextResponse.json(
+        { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },
+        { status: 400 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Check if email already exists
+    const { data: existingEmail, error: checkError } = await supabase
+      .from("allowed_emails")
+      .select("email, is_active")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (existingEmail && !checkError) {
+      if (existingEmail.is_active) {
         return NextResponse.json(
           { error: "This email is already in the allowed list" },
-          { status: 400 },
+          { status: 409 },
+        );
+      } else {
+        // Reactivate the email if it was deactivated
+        const { data: updatedEmail, error: updateError } = await supabase
+          .from("allowed_emails")
+          .update({
+            is_active: true,
+            first_name: firstName || null,
+            last_name: lastName || null,
+            role: role || "viewer",
+            notes: notes || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("email", email.toLowerCase())
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("Error reactivating email:", updateError);
+
+          return NextResponse.json(
+            { error: "Failed to reactivate email" },
+            { status: 500 },
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Email reactivated successfully",
+          data: updatedEmail,
+        });
+      }
+    }
+
+    // Add new allowed email
+    const { data: newEmail, error: insertError } = await supabase
+      .from("allowed_emails")
+      .insert({
+        email: email.toLowerCase(),
+        first_name: firstName || null,
+        last_name: lastName || null,
+        role: role || "viewer",
+        notes: notes || null,
+        added_by: sessionData.email, // Store who added this email
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error adding allowed email:", insertError);
+
+      return NextResponse.json(
+        { error: "Failed to add email to allowed list" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Email added to allowed list successfully",
+      data: newEmail,
+    });
+  } catch (error) {
+    console.error("Error in POST /api/admin/allowed-emails:", error);
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+// DELETE - Remove or deactivate allowed email
+export async function DELETE(request: NextRequest) {
+  try {
+    // Check if user is authenticated and is admin
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
+
+    if (!sessionCookie) {
+      return NextResponse.json(
+        { error: "Unauthorized - No session" },
+        { status: 401 },
+      );
+    }
+
+    // Decode session to check role
+    const sessionData = JSON.parse(
+      Buffer.from(sessionCookie.value, "base64").toString(),
+    );
+
+    if (sessionData.role !== "admin") {
+      return NextResponse.json(
+        { error: "Forbidden - Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
+
+    if (!email) {
+      return NextResponse.json(
+        { error: "Email parameter is required" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    // Check if email has been used
+    const { data: emailData, error: checkError } = await supabase
+      .from("allowed_emails")
+      .select("used_at")
+      .eq("email", email.toLowerCase())
+      .single();
+
+    if (checkError || !emailData) {
+      return NextResponse.json(
+        { error: "Email not found in allowed list" },
+        { status: 404 },
+      );
+    }
+
+    if (emailData.used_at) {
+      // If email has been used, only deactivate it
+      const { error: updateError } = await supabase
+        .from("allowed_emails")
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("email", email.toLowerCase());
+
+      if (updateError) {
+        console.error("Error deactivating email:", updateError);
+
+        return NextResponse.json(
+          { error: "Failed to deactivate email" },
+          { status: 500 },
         );
       }
 
-      throw new Error("Failed to add allowed email");
+      return NextResponse.json({
+        success: true,
+        message: "Email deactivated (already used for signup)",
+      });
+    } else {
+      // If email hasn't been used, we can delete it
+      const { error: deleteError } = await supabase
+        .from("allowed_emails")
+        .delete()
+        .eq("email", email.toLowerCase());
+
+      if (deleteError) {
+        console.error("Error deleting email:", deleteError);
+
+        return NextResponse.json(
+          { error: "Failed to delete email" },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Email removed from allowed list",
+      });
     }
-
-    const data = await response.json();
-
-    return NextResponse.json(data[0]);
   } catch (error) {
-    console.error("Error adding allowed email:", error);
+    console.error("Error in DELETE /api/admin/allowed-emails:", error);
 
     return NextResponse.json(
-      { error: "Failed to add allowed email" },
-      { status: 500 },
-    );
-  }
-}
-
-// PATCH update allowed email
-export async function PATCH(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Email ID is required" },
-        { status: 400 },
-      );
-    }
-
-    const body = await request.json();
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?id=eq.${id}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify({
-          ...body,
-          updated_at: new Date().toISOString(),
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to update allowed email");
-    }
-
-    const data = await response.json();
-
-    return NextResponse.json(data[0]);
-  } catch (error) {
-    console.error("Error updating allowed email:", error);
-
-    return NextResponse.json(
-      { error: "Failed to update allowed email" },
-      { status: 500 },
-    );
-  }
-}
-
-// DELETE allowed email
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Email ID is required" },
-        { status: 400 },
-      );
-    }
-
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?id=eq.${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
-        },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to delete allowed email");
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting allowed email:", error);
-
-    return NextResponse.json(
-      { error: "Failed to delete allowed email" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

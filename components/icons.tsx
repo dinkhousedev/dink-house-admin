@@ -24,6 +24,109 @@ export const Logo: React.FC<IconSvgProps> = ({
   </svg>
 );
 
+export const DinkHouseLogo: React.FC<IconSvgProps> = ({
+  size = 36,
+  width,
+  height,
+  ...props
+}) => (
+  <svg
+    height={size || height}
+    viewBox="0 0 200 200"
+    width={size || width}
+    {...props}
+  >
+    {/* Shield background */}
+    <path
+      d="M100 10 L180 50 L180 120 L100 190 L20 120 L20 50 Z"
+      fill="#000000"
+      stroke="#FFFFFF"
+      strokeWidth="3"
+    />
+
+    {/* Top banner with paddles and ball */}
+    <rect fill="#FFFFFF" height="35" width="140" x="30" y="40" />
+
+    {/* Pickleball paddles */}
+    <g transform="translate(100, 35)">
+      {/* Left paddle */}
+      <rect
+        fill="#B3FF00"
+        height="35"
+        rx="5"
+        stroke="#000"
+        strokeWidth="2"
+        width="25"
+        x="-45"
+        y="10"
+      />
+      <rect fill="#000" height="15" width="4" x="-42" y="35" />
+
+      {/* Right paddle */}
+      <rect
+        fill="#B3FF00"
+        height="35"
+        rx="5"
+        stroke="#000"
+        strokeWidth="2"
+        width="25"
+        x="20"
+        y="10"
+      />
+      <rect fill="#000" height="15" width="4" x="38" y="35" />
+
+      {/* Pickleball */}
+      <circle
+        cx="0"
+        cy="25"
+        fill="#B3FF00"
+        r="12"
+        stroke="#000"
+        strokeWidth="2"
+      />
+      <circle cx="-4" cy="22" fill="#000" r="2" />
+      <circle cx="4" cy="22" fill="#000" r="2" />
+      <circle cx="0" cy="28" fill="#000" r="2" />
+      <circle cx="-5" cy="27" fill="#000" r="2" />
+      <circle cx="5" cy="27" fill="#000" r="2" />
+    </g>
+
+    {/* THE DINK text */}
+    <text
+      fill="#FFFFFF"
+      fontFamily="Arial Black, sans-serif"
+      fontSize="24"
+      fontWeight="900"
+      textAnchor="middle"
+      x="100"
+      y="90"
+    >
+      THE DINK
+    </text>
+
+    {/* HOUSE banner */}
+    <rect fill="#B3FF00" height="30" width="120" x="40" y="95" />
+    <text
+      fill="#000000"
+      fontFamily="Arial Black, sans-serif"
+      fontSize="22"
+      fontWeight="900"
+      textAnchor="middle"
+      x="100"
+      y="115"
+    >
+      HOUSE
+    </text>
+
+    {/* Stars */}
+    <g fill="#B3FF00">
+      <path d="M70 140 L72 146 L78 146 L73 150 L75 156 L70 152 L65 156 L67 150 L62 146 L68 146 Z" />
+      <path d="M100 145 L103 153 L111 153 L105 158 L108 166 L100 161 L92 166 L95 158 L89 153 L97 153 Z" />
+      <path d="M130 140 L132 146 L138 146 L133 150 L135 156 L130 152 L125 156 L127 150 L122 146 L128 146 Z" />
+    </g>
+  </svg>
+);
+
 export const DiscordIcon: React.FC<IconSvgProps> = ({
   size = 24,
   width,

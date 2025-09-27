@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Card, CardBody, CardFooter, CardHeader } from "@heroui/card";
@@ -8,6 +11,7 @@ import { Tooltip } from "@heroui/tooltip";
 import { Icon } from "@iconify/react";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { useAuth } from "@/context/auth-context";
 
 const metrics = [
   {
@@ -140,6 +144,33 @@ const feedback = [
 ];
 
 export default function Home() {
+  const { employee, loading } = useAuth();
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        setUserLoading(true);
+        const response = await fetch("/api/auth/user");
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.success) {
+            setUserInfo(data.user);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
   return (
     <>
       <section className="hidden min-h-[calc(100vh-80px)] flex-1 gap-8 lg:flex lg:flex-row">
@@ -153,9 +184,24 @@ export default function Home() {
                   Daily Snapshot
                 </p>
                 <h1 className="text-3xl font-semibold tracking-tight text-dink-white sm:text-4xl">
-                  Welcome back, Jordan
+                  {userLoading
+                    ? "Loading..."
+                    : userInfo
+                      ? `Welcome back, ${userInfo.first_name}`
+                      : employee
+                        ? `Welcome back, ${employee.first_name}`
+                        : "Welcome back"}
                 </h1>
                 <p className="text-sm text-default-500 sm:text-base">
+                  {userInfo && (
+                    <>
+                      <span className="text-dink-lime">
+                        {userInfo.position || userInfo.role}
+                      </span>
+                      {userInfo.department && ` • ${userInfo.department}`}{" "}
+                      •{" "}
+                    </>
+                  )}
                   Courts are <span className="text-dink-lime">78% booked</span>{" "}
                   with three sold-out clinics tonight.
                 </p>

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 
+import { createClient } from "@/lib/supabase/server";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,6 +14,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    // First, verify the email is allowed
+    const { data: allowedEmail, error: checkError } = await supabase
+      .from("allowed_emails")
+      .select("email, used_at")
+      .eq("email", email.toLowerCase())
+      .eq("is_active", true)
+      .single();
+
+    if (checkError || !allowedEmail) {
+      return NextResponse.json(
+        {
+          error:
+            "This email is not authorized to sign up. Please contact your administrator.",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Check if email has already been used
+    if (allowedEmail.used_at) {
+      return NextResponse.json(
+        { error: "This email has already been used to create an account." },
+        { status: 409 },
       );
     }
 
@@ -42,6 +72,21 @@ export async function POST(request: NextRequest) {
       status: "active",
       created_at: new Date().toISOString(),
     };
+
+    // Mark the allowed email as used
+    const { error: updateError } = await supabase
+      .from("allowed_emails")
+      .update({
+        used_at: new Date().toISOString(),
+        used_by: userData.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("email", email.toLowerCase());
+
+    if (updateError) {
+      console.error("Error updating allowed_emails:", updateError);
+      // Continue even if update fails - the account is created
+    }
 
     // Set session cookie
     const cookieStore = await cookies();

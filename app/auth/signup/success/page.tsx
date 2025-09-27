@@ -5,6 +5,8 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 
+import { DinkHouseLogo } from "@/components/icons";
+
 export default function SignupSuccessPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#000000] px-4">
@@ -12,7 +14,7 @@ export default function SignupSuccessPage() {
         <CardHeader className="flex-col gap-4 pb-0 pt-8">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-dink-gradient text-dink-black shadow-lg shadow-dink-lime/20">
-              <Icon icon="game-icons:tennis-ball" width={26} />
+              <DinkHouseLogo size={26} />
             </div>
             <div>
               <p className="text-athletic text-lg font-semibold text-dink-lime">

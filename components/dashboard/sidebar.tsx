@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Card, CardBody, CardFooter } from "@heroui/card";
@@ -12,11 +14,13 @@ import { Icon } from "@iconify/react";
 import clsx from "clsx";
 
 import { useAuth } from "@/context/auth-context";
+import { DinkHouseLogo } from "@/components/icons";
 
 type NavItem = {
   key: string;
   label: string;
   icon: string;
+  href?: string;
   badge?: string;
   badgeTone?: "default" | "success" | "warning";
 };
@@ -32,19 +36,27 @@ const navSections: NavSection[] = [
     key: "operations",
     title: "Operations",
     items: [
-      { key: "overview", label: "Court Overview", icon: "solar:home-2-linear" },
+      {
+        key: "overview",
+        label: "Court Overview",
+        icon: "solar:home-2-linear",
+        href: "/dashboard/court_overview",
+      },
       {
         key: "bookings",
         label: "Session Bookings",
         icon: "solar:calendar-linear",
+        href: "/dashboard/session_booking",
       },
-      {
-        key: "maintenance",
-        label: "Facility Maintenance",
-        icon: "solar:tools-linear",
-        badge: "2",
-      },
-      { key: "inventory", label: "Pro Shop", icon: "solar:cart-3-linear" },
+    ],
+  },
+  {
+    key: "point-of-sale",
+    title: "Point-of-Sale",
+    items: [
+      { key: "merchandise", label: "Merchandise", icon: "solar:t-shirt-bold" },
+      { key: "rentals", label: "Rentals", icon: "solar:tennis-outline" },
+      { key: "open-play", label: "Open Play", icon: "solar:cart-3-linear" },
     ],
   },
   {
@@ -92,6 +104,33 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    key: "Security Cameras",
+    title: "Security Cameras",
+    items: [
+      { key: "overview", label: "Overview", icon: "solar:home-2-linear" },
+      {
+        key: "recordings",
+        label: "Recordings",
+        icon: "solar:videocamera-record-bold",
+      },
+      { key: "alarms", label: "Alarms", icon: "solar:alarm-bold" },
+      { key: "motion", label: "Motion", icon: "solar:running-bold-duotone" },
+      { key: "events", label: "Events", icon: "solar:shield-warning-bold" },
+      { key: "settings", label: "Settings", icon: "solar:settings-bold" },
+    ],
+  },
+  {
+    key: "marketing",
+    title: "Marketing",
+    items: [
+      {
+        key: "email-campaigns",
+        label: "Email Campaigns",
+        icon: "solar:station-minimalistic-outline",
+      },
+    ],
+  },
+  {
     key: "community",
     title: "Community",
     items: [
@@ -112,22 +151,91 @@ const navSections: NavSection[] = [
 ];
 
 export function DashboardSidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [activeKey, setActiveKey] = useState<string>(
     navSections[0]?.items[0]?.key ?? "overview",
   );
-  const { employee, signOut } = useAuth();
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    new Set(),
+  );
+  const { employee, signOut, loading } = useAuth();
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("dink-collapsed-sections");
+
+    if (saved) {
+      setCollapsedSections(new Set(JSON.parse(saved)));
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        setUserLoading(true);
+        const response = await fetch("/api/auth/user");
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.success) {
+            setUserInfo(data.user);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
+  useEffect(() => {
+    // Set active key based on current pathname
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if (item.href === pathname) {
+          setActiveKey(item.key);
+
+          return;
+        }
+      }
+    }
+  }, [pathname]);
+
+  const toggleSection = (sectionKey: string) => {
+    const newCollapsed = new Set(collapsedSections);
+
+    if (newCollapsed.has(sectionKey)) {
+      newCollapsed.delete(sectionKey);
+    } else {
+      newCollapsed.add(sectionKey);
+    }
+    setCollapsedSections(newCollapsed);
+    localStorage.setItem(
+      "dink-collapsed-sections",
+      JSON.stringify(Array.from(newCollapsed)),
+    );
+  };
 
   return (
     <aside className="hidden min-w-[320px] max-w-[360px] flex-col rounded-3xl border border-dink-gray bg-[#0F0F0F]/90 p-6 text-sm backdrop-blur-xl xl:p-7 2xl:p-8 lg:flex">
-      <div className="flex items-center gap-3 px-1">
+      <button
+        className="flex items-center gap-3 px-1 transition-opacity hover:opacity-80"
+        onClick={() => router.push("/")}
+      >
         <div className="flex h-10 w-10 items-center justify-center rounded-[1rem] bg-dink-gradient text-dink-black shadow-lg shadow-dink-lime/20">
-          <Icon icon="game-icons:tennis-ball" width={22} />
+          <DinkHouseLogo size={22} />
         </div>
-        <div>
+        <div className="text-left">
           <p className="text-athletic text-sm text-dink-lime">Dink House</p>
           <p className="text-xs text-default-500">Admin Console</p>
         </div>
-      </div>
+      </button>
 
       <Spacer y={6} />
 
@@ -138,18 +246,32 @@ export function DashboardSidebar() {
             base: "border-dink-lime",
           }}
           name={
-            employee ? `${employee.first_name} ${employee.last_name}` : "User"
+            userInfo
+              ? `${userInfo.first_name} ${userInfo.last_name}`
+              : !loading && employee
+                ? `${employee.first_name} ${employee.last_name}`
+                : "User"
           }
           size="sm"
         />
         <div className="flex flex-col">
           <p className="text-sm font-medium text-dink-white">
-            {employee
-              ? `${employee.first_name} ${employee.last_name}`
-              : "Loading..."}
+            {userLoading
+              ? "Loading..."
+              : userInfo
+                ? `${userInfo.first_name} ${userInfo.last_name}`
+                : employee
+                  ? `${employee.first_name} ${employee.last_name}`
+                  : "User"}
           </p>
           <p className="text-xs text-default-500">
-            {employee?.position_title || employee?.role || "Employee"}
+            {userLoading
+              ? "..."
+              : userInfo?.position ||
+                userInfo?.department ||
+                employee?.position_title ||
+                employee?.role ||
+                "Employee"}
           </p>
         </div>
       </div>
@@ -176,61 +298,99 @@ export function DashboardSidebar() {
 
       <ScrollShadow className="-mx-1 mt-6 flex-1 px-1">
         <nav className="flex flex-col gap-8">
-          {navSections.map((section) => (
-            <div key={section.key}>
-              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-default-500">
-                {section.title}
-              </p>
-              <div className="mt-4 flex flex-col gap-2">
-                {section.items.map((item) => {
-                  const isActive = activeKey === item.key;
+          {navSections.map((section) => {
+            const isCollapsed = collapsedSections.has(section.key);
 
-                  return (
-                    <Button
-                      key={item.key}
-                      className={clsx(
-                        "w-full justify-between gap-3 px-4 py-3 text-left text-sm transition-all",
-                        isActive
-                          ? "bg-dink-lime text-dink-black shadow-lg shadow-dink-lime/30"
-                          : "bg-transparent text-default-500 hover:bg-[#1C1C1C]",
-                      )}
-                      color={isActive ? "primary" : "default"}
-                      radius="lg"
-                      startContent={
-                        <Icon
-                          className={clsx(
-                            "transition-colors",
-                            isActive ? "text-dink-black" : "text-default-500",
-                          )}
-                          icon={item.icon}
-                          width={22}
-                        />
-                      }
-                      variant={isActive ? "solid" : "light"}
-                      onPress={() => setActiveKey(item.key)}
+            return (
+              <div key={section.key}>
+                <button
+                  className="group flex w-full items-center justify-between px-2 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-default-500 transition-colors hover:text-dink-lime"
+                  onClick={() => toggleSection(section.key)}
+                >
+                  <span>{section.title}</span>
+                  <Icon
+                    className={clsx(
+                      "transition-transform duration-200",
+                      isCollapsed ? "-rotate-90" : "rotate-0",
+                    )}
+                    icon="solar:alt-arrow-down-linear"
+                    width={16}
+                  />
+                </button>
+                <AnimatePresence initial={false}>
+                  {!isCollapsed && (
+                    <motion.div
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
+                      style={{ overflow: "hidden" }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
                     >
-                      <span className="flex-1 text-left font-medium">
-                        {item.label}
-                      </span>
-                      {item.badge ? (
-                        <Chip
-                          color={
-                            item.badgeTone === "success" ? "success" : "default"
-                          }
-                          size="sm"
-                          variant={
-                            item.badgeTone === "success" ? "solid" : "flat"
-                          }
-                        >
-                          {item.badge}
-                        </Chip>
-                      ) : null}
-                    </Button>
-                  );
-                })}
+                      <div className="mt-4 flex flex-col gap-2">
+                        {section.items.map((item) => {
+                          const isActive = activeKey === item.key;
+
+                          return (
+                            <Button
+                              key={item.key}
+                              className={clsx(
+                                "w-full justify-between gap-3 px-4 py-3 text-left text-sm transition-all",
+                                isActive
+                                  ? "bg-dink-lime text-dink-black shadow-lg shadow-dink-lime/30"
+                                  : "bg-transparent text-default-500 hover:bg-[#1C1C1C]",
+                              )}
+                              color={isActive ? "primary" : "default"}
+                              radius="lg"
+                              startContent={
+                                <Icon
+                                  className={clsx(
+                                    "transition-colors",
+                                    isActive
+                                      ? "text-dink-black"
+                                      : "text-default-500",
+                                  )}
+                                  icon={item.icon}
+                                  width={22}
+                                />
+                              }
+                              variant={isActive ? "solid" : "light"}
+                              onPress={() => {
+                                setActiveKey(item.key);
+                                if (item.href) {
+                                  router.push(item.href);
+                                }
+                              }}
+                            >
+                              <span className="flex-1 text-left font-medium">
+                                {item.label}
+                              </span>
+                              {item.badge ? (
+                                <Chip
+                                  color={
+                                    item.badgeTone === "success"
+                                      ? "success"
+                                      : "default"
+                                  }
+                                  size="sm"
+                                  variant={
+                                    item.badgeTone === "success"
+                                      ? "solid"
+                                      : "flat"
+                                  }
+                                >
+                                  {item.badge}
+                                </Chip>
+                              ) : null}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         <Card
@@ -289,7 +449,7 @@ export function DashboardSidebar() {
             />
           }
           variant="light"
-          onClick={signOut}
+          onPress={signOut}
         >
           Sign Out
         </Button>

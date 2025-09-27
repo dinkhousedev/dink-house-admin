@@ -1,8 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { Event, EventFormData, Court } from "@/types/events";
 import { revalidatePath } from "next/cache";
+
+import { createClient } from "@/lib/supabase/server";
+import { EventFormData } from "@/types/events";
 
 // GET: Fetch all events
 export async function getEvents(startDate?: Date, endDate?: Date) {
@@ -11,12 +12,14 @@ export async function getEvents(startDate?: Date, endDate?: Date) {
   try {
     let query = supabase
       .from("events")
-      .select(`
+      .select(
+        `
         *,
         event_courts (
           court:courts (*)
         )
-      `)
+      `,
+      )
       .eq("is_cancelled", false)
       .order("start_time", { ascending: true });
 
@@ -31,24 +34,27 @@ export async function getEvents(startDate?: Date, endDate?: Date) {
 
     if (error) {
       console.error("Error fetching events:", error);
+
       return { success: false, error: error.message };
     }
 
     // Transform data to match frontend types
     const events = data?.map((event: any) => ({
       ...event,
-      courts: event.event_courts?.map((ec: any) => ({
-        id: ec.court.id,
-        court_number: ec.court.court_number,
-        name: ec.court.name,
-        surface_type: ec.court.surface_type,
-        is_primary: ec.is_primary,
-      })) || [],
+      courts:
+        event.event_courts?.map((ec: any) => ({
+          id: ec.court.id,
+          court_number: ec.court.court_number,
+          name: ec.court.name,
+          surface_type: ec.court.surface_type,
+          is_primary: ec.is_primary,
+        })) || [],
     }));
 
     return { success: true, data: events };
   } catch (error) {
     console.error("Error in getEvents:", error);
+
     return { success: false, error: "Failed to fetch events" };
   }
 }
@@ -59,8 +65,9 @@ export async function getEvent(eventId: string) {
 
   try {
     const { data, error } = await supabase
-            .from("events")
-      .select(`
+      .from("events")
+      .select(
+        `
         *,
         event_courts (
           court:courts (*),
@@ -72,31 +79,35 @@ export async function getEvent(eventId: string) {
           skill_level,
           status
         )
-      `)
+      `,
+      )
       .eq("id", eventId)
       .single();
 
     if (error) {
       console.error("Error fetching event:", error);
+
       return { success: false, error: error.message };
     }
 
     // Transform data
     const event = {
       ...data,
-      courts: data.event_courts?.map((ec: any) => ({
-        id: ec.court.id,
-        court_number: ec.court.court_number,
-        name: ec.court.name,
-        surface_type: ec.court.surface_type,
-        is_primary: ec.is_primary,
-      })) || [],
+      courts:
+        data.event_courts?.map((ec: any) => ({
+          id: ec.court.id,
+          court_number: ec.court.court_number,
+          name: ec.court.name,
+          surface_type: ec.court.surface_type,
+          is_primary: ec.is_primary,
+        })) || [],
       registrations: data.event_registrations || [],
     };
 
     return { success: true, data: event };
   } catch (error) {
     console.error("Error in getEvent:", error);
+
     return { success: false, error: "Failed to fetch event" };
   }
 }
@@ -108,7 +119,7 @@ export async function createEvent(formData: EventFormData) {
   try {
     // Start a transaction by creating the event first
     const { data: eventData, error: eventError } = await supabase
-            .from("events")
+      .from("events")
       .insert({
         title: formData.title,
         description: formData.description,
@@ -130,6 +141,7 @@ export async function createEvent(formData: EventFormData) {
 
     if (eventError) {
       console.error("Error creating event:", eventError);
+
       return { success: false, error: eventError.message };
     }
 
@@ -142,33 +154,43 @@ export async function createEvent(formData: EventFormData) {
       }));
 
       const { error: courtsError } = await supabase
-                .from("event_courts")
+        .from("event_courts")
         .insert(courtAssignments);
 
       if (courtsError) {
         // Rollback by deleting the event
-        await supabase.schema("events").from("events").delete().eq("id", eventData.id);
+        await supabase
+          .schema("events")
+          .from("events")
+          .delete()
+          .eq("id", eventData.id);
         console.error("Error assigning courts:", courtsError);
+
         return { success: false, error: courtsError.message };
       }
     }
 
     revalidatePath("/session_booking");
+
     return { success: true, data: eventData };
   } catch (error) {
     console.error("Error in createEvent:", error);
+
     return { success: false, error: "Failed to create event" };
   }
 }
 
 // PUT: Update event
-export async function updateEvent(eventId: string, updates: Partial<EventFormData>) {
+export async function updateEvent(
+  eventId: string,
+  updates: Partial<EventFormData>,
+) {
   const supabase = await createClient();
 
   try {
     // Update the event
     const { data: eventData, error: eventError } = await supabase
-            .from("events")
+      .from("events")
       .update({
         title: updates.title,
         description: updates.description,
@@ -191,16 +213,14 @@ export async function updateEvent(eventId: string, updates: Partial<EventFormDat
 
     if (eventError) {
       console.error("Error updating event:", eventError);
+
       return { success: false, error: eventError.message };
     }
 
     // Update court assignments if provided
     if (updates.court_ids) {
       // Delete existing assignments
-      await supabase
-                .from("event_courts")
-        .delete()
-        .eq("event_id", eventId);
+      await supabase.from("event_courts").delete().eq("event_id", eventId);
 
       // Insert new assignments
       if (updates.court_ids.length > 0) {
@@ -211,20 +231,23 @@ export async function updateEvent(eventId: string, updates: Partial<EventFormDat
         }));
 
         const { error: courtsError } = await supabase
-                    .from("event_courts")
+          .from("event_courts")
           .insert(courtAssignments);
 
         if (courtsError) {
           console.error("Error updating courts:", courtsError);
+
           return { success: false, error: courtsError.message };
         }
       }
     }
 
     revalidatePath("/session_booking");
+
     return { success: true, data: eventData };
   } catch (error) {
     console.error("Error in updateEvent:", error);
+
     return { success: false, error: "Failed to update event" };
   }
 }
@@ -235,20 +258,20 @@ export async function deleteEvent(eventId: string) {
 
   try {
     // Delete event (cascade will handle related records)
-    const { error } = await supabase
-            .from("events")
-      .delete()
-      .eq("id", eventId);
+    const { error } = await supabase.from("events").delete().eq("id", eventId);
 
     if (error) {
       console.error("Error deleting event:", error);
+
       return { success: false, error: error.message };
     }
 
     revalidatePath("/session_booking");
+
     return { success: true };
   } catch (error) {
     console.error("Error in deleteEvent:", error);
+
     return { success: false, error: "Failed to delete event" };
   }
 }
@@ -259,7 +282,7 @@ export async function cancelEvent(eventId: string, reason?: string) {
 
   try {
     const { data, error } = await supabase
-            .from("events")
+      .from("events")
       .update({
         is_cancelled: true,
         cancellation_reason: reason,
@@ -271,13 +294,16 @@ export async function cancelEvent(eventId: string, reason?: string) {
 
     if (error) {
       console.error("Error cancelling event:", error);
+
       return { success: false, error: error.message };
     }
 
     revalidatePath("/session_booking");
+
     return { success: true, data };
   } catch (error) {
     console.error("Error in cancelEvent:", error);
+
     return { success: false, error: "Failed to cancel event" };
   }
 }
@@ -288,19 +314,21 @@ export async function getCourts() {
 
   try {
     const { data, error } = await supabase
-            .from("courts")
+      .from("courts")
       .select("*")
       .eq("status", "available")
       .order("court_number");
 
     if (error) {
       console.error("Error fetching courts:", error);
+
       return { success: false, error: error.message };
     }
 
     return { success: true, data };
   } catch (error) {
     console.error("Error in getCourts:", error);
+
     return { success: false, error: "Failed to fetch courts" };
   }
 }
@@ -311,19 +339,21 @@ export async function getEventTemplates() {
 
   try {
     const { data, error } = await supabase
-            .from("event_templates")
+      .from("event_templates")
       .select("*")
       .eq("is_active", true)
       .order("name");
 
     if (error) {
       console.error("Error fetching templates:", error);
+
       return { success: false, error: error.message };
     }
 
     return { success: true, data };
   } catch (error) {
     console.error("Error in getEventTemplates:", error);
+
     return { success: false, error: "Failed to fetch templates" };
   }
 }
