@@ -32,33 +32,46 @@ export async function GET() {
       auth: { persistSession: false },
     });
 
-    // Get user info by session token (function is in api schema)
-    const { data: userData, error: userError } = await supabaseAdmin
-      .schema("api")
-      .rpc("get_user_by_session", {
-        session_token: sessionToken.value,
-      });
+    // Verify the session with Supabase Auth
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(
+      sessionToken.value
+    );
 
-    if (userError) {
-      console.error("Error getting user by session:", userError);
+    if (authError || !authUser) {
+      console.error("Error verifying session:", authError);
       return NextResponse.json(
-        { error: "Failed to get user info", success: false, details: userError.message },
-        { status: 500 }
+        { error: "Invalid session", success: false },
+        { status: 401 }
       );
     }
 
-    if (userData?.success && userData?.user) {
-      return NextResponse.json({
-        success: true,
-        user: userData.user,
-      });
+    // Get employee data from database
+    const { data: employee, error: employeeError } = await supabaseAdmin
+      .from("employees")
+      .select("id, email, first_name, last_name, role, is_active, auth_id")
+      .eq("auth_id", authUser.id)
+      .eq("is_active", true)
+      .single();
+
+    if (employeeError || !employee) {
+      console.error("Error getting employee:", employeeError);
+      return NextResponse.json(
+        { error: "Employee not found", success: false },
+        { status: 404 }
+      );
     }
 
-    // If no user data found
-    return NextResponse.json(
-      { error: "User not found", success: false },
-      { status: 404 }
-    );
+    // Return user data
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: employee.id,
+        email: employee.email,
+        name: `${employee.first_name} ${employee.last_name}`.trim(),
+        role: employee.role,
+        auth_id: employee.auth_id,
+      },
+    });
   } catch (error) {
     console.error("User API error:", error);
     return NextResponse.json(
