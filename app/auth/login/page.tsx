@@ -20,13 +20,15 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+
       console.log("Attempting Google OAuth...");
-      console.log("Redirect URL:", "http://localhost:3000/auth/callback");
+      console.log("Redirect URL:", redirectUrl);
 
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback",
+          redirectTo: redirectUrl,
         },
       });
 
