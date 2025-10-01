@@ -12,12 +12,16 @@ export const siteConfig = {
   ],
   navMenuItems: [
     {
-      label: "Profile",
-      href: "/profile",
+      label: "Dashboard",
+      href: "/",
     },
     {
-      label: "Dashboard",
-      href: "/dashboard",
+      label: "Contact Inquiries",
+      href: "/contact-inquiries",
+    },
+    {
+      label: "Profile",
+      href: "/profile",
     },
     {
       label: "Projects",
