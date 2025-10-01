@@ -7,11 +7,16 @@ if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
-// Initialize Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Initialize Supabase client function
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    throw new Error("Supabase environment variables are not configured");
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,6 +94,8 @@ export async function POST(request: NextRequest) {
 
     // Log the email send
     if (inquiryId) {
+      const supabase = getSupabaseClient();
+
       await supabase.rpc("log_email", {
         p_template_key: "admin_response",
         p_to_email: to,
