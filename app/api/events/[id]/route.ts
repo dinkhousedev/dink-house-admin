@@ -11,10 +11,11 @@ import { EventFormData } from "@/types/events";
 // GET /api/events/[id] - Get single event
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const result = await getEvent(params.id);
+    const { id } = await params;
+    const result = await getEvent(id);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 404 });
@@ -25,7 +26,7 @@ export async function GET(
       data: result.data,
     });
   } catch (error) {
-    console.error(`API GET /events/${params.id} error:`, error);
+    console.error(`API GET /events/[id] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },
@@ -37,12 +38,13 @@ export async function GET(
 // PUT /api/events/[id] - Update event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body: Partial<EventFormData> = await request.json();
 
-    const result = await updateEvent(params.id, body);
+    const result = await updateEvent(id, body);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -54,7 +56,7 @@ export async function PUT(
       message: "Event updated successfully",
     });
   } catch (error) {
-    console.error(`API PUT /events/${params.id} error:`, error);
+    console.error(`API PUT /events/[id] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },
@@ -66,9 +68,10 @@ export async function PUT(
 // DELETE /api/events/[id] - Delete event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     // Check for soft delete (cancel) via query param
     const searchParams = request.nextUrl.searchParams;
     const cancel = searchParams.get("cancel") === "true";
@@ -77,9 +80,9 @@ export async function DELETE(
     let result;
 
     if (cancel) {
-      result = await cancelEvent(params.id, reason || undefined);
+      result = await cancelEvent(id, reason || undefined);
     } else {
-      result = await deleteEvent(params.id);
+      result = await deleteEvent(id);
     }
 
     if (!result.success) {
@@ -93,7 +96,7 @@ export async function DELETE(
         : "Event deleted successfully",
     });
   } catch (error) {
-    console.error(`API DELETE /events/${params.id} error:`, error);
+    console.error(`API DELETE /events/[id] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },

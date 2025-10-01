@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     // Check specific email
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?email=eq.${email.toLowerCase()}&is_active=eq.true`,
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/allowed_emails?email=eq.${email!.toLowerCase()}&is_active=eq.true`,
       {
         headers: {
           apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

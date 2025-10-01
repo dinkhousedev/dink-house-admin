@@ -107,7 +107,7 @@ export function QuickEventModal({
         title ||
         `${selectedType.replace("_", " ").toUpperCase()} - ${date?.toString()}`,
       event_type: selectedType,
-      date: date?.toDate(),
+      date: date?.toDate("UTC"),
       start_time: startTime.toString(),
       duration_minutes: duration,
       max_capacity: capacity,
@@ -207,7 +207,7 @@ export function QuickEventModal({
                 label="Start Time"
                 value={startTime}
                 variant="bordered"
-                onChange={setStartTime}
+                onChange={(value) => value && setStartTime(value)}
               />
             </div>
 

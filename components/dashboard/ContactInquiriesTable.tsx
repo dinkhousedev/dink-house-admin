@@ -249,13 +249,13 @@ export default function ContactInquiriesTable() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="max-w-xs"
           >
-            <SelectItem key="all" value="all">All Status</SelectItem>
-            <SelectItem key="new" value="new">New</SelectItem>
-            <SelectItem key="in_progress" value="in_progress">In Progress</SelectItem>
-            <SelectItem key="responded" value="responded">Responded</SelectItem>
-            <SelectItem key="resolved" value="resolved">Resolved</SelectItem>
-            <SelectItem key="closed" value="closed">Closed</SelectItem>
-            <SelectItem key="spam" value="spam">Spam</SelectItem>
+            <SelectItem key="all">All Status</SelectItem>
+            <SelectItem key="new">New</SelectItem>
+            <SelectItem key="in_progress">In Progress</SelectItem>
+            <SelectItem key="responded">Responded</SelectItem>
+            <SelectItem key="resolved">Resolved</SelectItem>
+            <SelectItem key="closed">Closed</SelectItem>
+            <SelectItem key="spam">Spam</SelectItem>
           </Select>
         </div>
       </div>
@@ -420,12 +420,12 @@ export default function ContactInquiriesTable() {
                             className="max-w-xs"
                             isDisabled={updating}
                           >
-                            <SelectItem key="new" value="new">New</SelectItem>
-                            <SelectItem key="in_progress" value="in_progress">In Progress</SelectItem>
-                            <SelectItem key="responded" value="responded">Responded</SelectItem>
-                            <SelectItem key="resolved" value="resolved">Resolved</SelectItem>
-                            <SelectItem key="closed" value="closed">Closed</SelectItem>
-                            <SelectItem key="spam" value="spam">Spam</SelectItem>
+                            <SelectItem key="new">New</SelectItem>
+                            <SelectItem key="in_progress">In Progress</SelectItem>
+                            <SelectItem key="responded">Responded</SelectItem>
+                            <SelectItem key="resolved">Resolved</SelectItem>
+                            <SelectItem key="closed">Closed</SelectItem>
+                            <SelectItem key="spam">Spam</SelectItem>
                           </Select>
                         </div>
                       </CardBody>
