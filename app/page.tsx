@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Card, CardBody, CardFooter, CardHeader } from "@heroui/card";
@@ -13,16 +13,7 @@ import { Icon } from "@iconify/react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { useAuth } from "@/context/auth-context";
 
-const metrics = [
-  {
-    key: "members",
-    label: "Active Members",
-    value: "1,284",
-    delta: "+6.2%",
-    caption: "vs. last week",
-    icon: "solar:users-group-rounded-outline",
-    tone: "positive" as const,
-  },
+const staticMetrics = [
   {
     key: "utilization",
     label: "Court Utilization",
@@ -147,6 +138,7 @@ export default function Home() {
   const { employee, loading } = useAuth();
   const [userInfo, setUserInfo] = useState<any>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [subscriberStats, setSubscriberStats] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -168,8 +160,39 @@ export default function Home() {
       }
     };
 
+    const fetchSubscriberStats = async () => {
+      try {
+        const response = await fetch("/api/subscribers/count");
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.success) {
+            setSubscriberStats(data.data);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching subscriber stats:", error);
+      }
+    };
+
     fetchUserInfo();
+    fetchSubscriberStats();
   }, []);
+
+  const metrics = useMemo(() => {
+    const subscriberMetric = {
+      key: "subscribers",
+      label: "Newsletter Subscribers",
+      value: subscriberStats?.active?.toLocaleString() || "Loading...",
+      delta: subscriberStats?.growthRate || "+0%",
+      caption: "vs. last week",
+      icon: "solar:letter-unread-linear",
+      tone: "positive" as const,
+    };
+
+    return [subscriberMetric, ...staticMetrics];
+  }, [subscriberStats]);
 
   return (
     <>
@@ -449,7 +472,16 @@ export default function Home() {
   );
 }
 
-type Metric = (typeof metrics)[number];
+type Metric = (typeof staticMetrics)[number] | {
+  key: string;
+  label: string;
+  value: string;
+  delta: string;
+  caption: string;
+  icon: string;
+  tone: "positive" | "neutral";
+  progress?: number;
+};
 
 function MetricCard({ metric }: { metric: Metric }) {
   const toneClass =

@@ -50,79 +50,85 @@ const navSections: NavSection[] = [
       },
     ],
   },
-  {
-    key: "point-of-sale",
-    title: "Point-of-Sale",
-    items: [
-      { key: "merchandise", label: "Merchandise", icon: "solar:t-shirt-bold" },
-      { key: "rentals", label: "Rentals", icon: "solar:tennis-outline" },
-      { key: "open-play", label: "Open Play", icon: "solar:cart-3-linear" },
-    ],
-  },
-  {
-    key: "employees",
-    title: "Employee Management",
-    items: [
-      {
-        key: "employee-dashboard",
-        label: "My Dashboard",
-        icon: "solar:user-bold-duotone",
-      },
-      {
-        key: "employee-roster",
-        label: "Employee Roster",
-        icon: "solar:users-group-two-rounded-outline",
-      },
-      { key: "payroll", label: "Payroll", icon: "solar:wallet-linear" },
-      {
-        key: "documents",
-        label: "Documents",
-        icon: "solar:folder-with-files-linear",
-      },
-      {
-        key: "onboarding",
-        label: "Onboarding",
-        icon: "solar:user-plus-linear",
-        badge: "3",
-      },
-    ],
-  },
-  {
-    key: "performance",
-    title: "Performance",
-    items: [
-      { key: "coaching", label: "Coaching", icon: "solar:user-speak-linear" },
-      {
-        key: "leagues",
-        label: "League Play",
-        icon: "solar:trophy-linear",
-        badge: "Live",
-        badgeTone: "success",
-      },
-      { key: "events", label: "Events", icon: "solar:star-fall-linear" },
-      { key: "analytics", label: "Analytics", icon: "solar:chart-outline" },
-    ],
-  },
-  {
-    key: "Security Cameras",
-    title: "Security Cameras",
-    items: [
-      { key: "overview", label: "Overview", icon: "solar:home-2-linear" },
-      {
-        key: "recordings",
-        label: "Recordings",
-        icon: "solar:videocamera-record-bold",
-      },
-      { key: "alarms", label: "Alarms", icon: "solar:alarm-bold" },
-      { key: "motion", label: "Motion", icon: "solar:running-bold-duotone" },
-      { key: "events", label: "Events", icon: "solar:shield-warning-bold" },
-      { key: "settings", label: "Settings", icon: "solar:settings-bold" },
-    ],
-  },
+  // {
+  //   key: "point-of-sale",
+  //   title: "Point-of-Sale",
+  //   items: [
+  //     { key: "merchandise", label: "Merchandise", icon: "solar:t-shirt-bold" },
+  //     { key: "rentals", label: "Rentals", icon: "solar:tennis-outline" },
+  //     { key: "open-play", label: "Open Play", icon: "solar:cart-3-linear" },
+  //   ],
+  // },
+  // {
+  //   key: "employees",
+  //   title: "Employee Management",
+  //   items: [
+  //     {
+  //       key: "employee-dashboard",
+  //       label: "My Dashboard",
+  //       icon: "solar:user-bold-duotone",
+  //     },
+  //     {
+  //       key: "employee-roster",
+  //       label: "Employee Roster",
+  //       icon: "solar:users-group-two-rounded-outline",
+  //     },
+  //     { key: "payroll", label: "Payroll", icon: "solar:wallet-linear" },
+  //     {
+  //       key: "documents",
+  //       label: "Documents",
+  //       icon: "solar:folder-with-files-linear",
+  //     },
+  //     {
+  //       key: "onboarding",
+  //       label: "Onboarding",
+  //       icon: "solar:user-plus-linear",
+  //       badge: "3",
+  //     },
+  //   ],
+  // },
+  // {
+  //   key: "performance",
+  //   title: "Performance",
+  //   items: [
+  //     { key: "coaching", label: "Coaching", icon: "solar:user-speak-linear" },
+  //     {
+  //       key: "leagues",
+  //       label: "League Play",
+  //       icon: "solar:trophy-linear",
+  //       badge: "Live",
+  //       badgeTone: "success",
+  //     },
+  //     { key: "events", label: "Events", icon: "solar:star-fall-linear" },
+  //     { key: "analytics", label: "Analytics", icon: "solar:chart-outline" },
+  //   ],
+  // },
+  // {
+  //   key: "Security Cameras",
+  //   title: "Security Cameras",
+  //   items: [
+  //     { key: "overview", label: "Overview", icon: "solar:home-2-linear" },
+  //     {
+  //       key: "recordings",
+  //       label: "Recordings",
+  //       icon: "solar:videocamera-record-bold",
+  //     },
+  //     { key: "alarms", label: "Alarms", icon: "solar:alarm-bold" },
+  //     { key: "motion", label: "Motion", icon: "solar:running-bold-duotone" },
+  //     { key: "events", label: "Events", icon: "solar:shield-warning-bold" },
+  //     { key: "settings", label: "Settings", icon: "solar:settings-bold" },
+  //   ],
+  // },
   {
     key: "marketing",
     title: "Marketing",
     items: [
+      {
+        key: "subscribers",
+        label: "Subscribers",
+        icon: "solar:letter-unread-linear",
+        href: "/dashboard/marketing",
+      },
       {
         key: "email-campaigns",
         label: "Email Campaigns",
@@ -145,7 +151,6 @@ const navSections: NavSection[] = [
         icon: "solar:chat-dots-line-duotone",
         badge: "5",
       },
-      { key: "marketing", label: "Marketing", icon: "solar:bullhorn-linear" },
     ],
   },
 ];
