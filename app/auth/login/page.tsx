@@ -20,7 +20,9 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      // Use environment variable if set, otherwise use current origin
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const redirectUrl = `${baseUrl}/auth/callback`;
 
       console.log("Attempting Google OAuth...");
       console.log("Redirect URL:", redirectUrl);
