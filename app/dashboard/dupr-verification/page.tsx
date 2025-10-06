@@ -50,7 +50,6 @@ export default function DUPRVerificationPage() {
 
       if (error) {
         console.error("Error fetching verifications:", error);
-        toast.error("Failed to load pending verifications");
 
         return;
       }
@@ -62,7 +61,6 @@ export default function DUPRVerificationPage() {
       }
     } catch (err) {
       console.error("Exception fetching verifications:", err);
-      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -90,23 +88,21 @@ export default function DUPRVerificationPage() {
 
       if (error) {
         console.error("Error verifying DUPR:", error);
-        toast.error("Failed to verify DUPR rating");
 
         return;
       }
 
       if (data?.success) {
-        toast.success(
+        console.log(
           data.message || "DUPR rating processed successfully",
         );
         // Refresh the list
         await fetchPendingVerifications();
       } else {
-        toast.error(data?.error || "Failed to process verification");
+        console.error(data?.error || "Failed to process verification");
       }
     } catch (err) {
       console.error("Exception verifying DUPR:", err);
-      toast.error("An unexpected error occurred");
     }
   };
 

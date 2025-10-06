@@ -72,7 +72,7 @@ export default function BenefitManagementPage() {
         .schema("crowdfunding")
         .from("v_pending_fulfillment")
         .select("*")
-        .order("days_until_expiration", { ascending: true, nullsLast: true });
+        .order("days_until_expiration", { ascending: true });
 
       if (filterType && filterType !== "all") {
         query = query.eq("benefit_type", filterType);
