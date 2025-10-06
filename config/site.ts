@@ -16,6 +16,10 @@ export const siteConfig = {
       href: "/",
     },
     {
+      label: "DUPR Verification",
+      href: "/dashboard/dupr-verification",
+    },
+    {
       label: "Contact Inquiries",
       href: "/contact-inquiries",
     },

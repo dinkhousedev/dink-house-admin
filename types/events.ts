@@ -110,6 +110,17 @@ export interface Event {
   series_name?: string;
   recurrence_frequency?: RecurrenceFrequency;
 
+  // Staff-specific fields
+  staff_notes?: string;
+  setup_requirements?: {
+    equipment: string[];
+    staffing: string[];
+    other: string[];
+  };
+  instructor_id?: string;
+  registration_deadline?: string;
+  confirmation_email_sent?: boolean;
+
   // Metadata
   created_by?: string;
   created_at: string;
@@ -214,6 +225,17 @@ export interface EventFormData {
   price_guest: number;
   equipment_provided: boolean;
   special_instructions?: string;
+  // Staff fields
+  staff_notes?: string;
+  setup_requirements?: {
+    equipment: string[];
+    staffing: string[];
+    other: string[];
+  };
+  instructor_id?: string;
+  registration_deadline?: string;
+  waitlist_capacity?: number;
+  check_in_time?: string;
 }
 
 export interface RecurrenceFormData {
@@ -266,6 +288,12 @@ export interface CourtAvailabilityCheck {
     }[];
   }[];
   all_available: boolean;
+}
+
+export interface CourtAvailabilityResponse {
+  court: Court;
+  available: boolean;
+  conflicts: Event[];
 }
 
 // Calendar view types

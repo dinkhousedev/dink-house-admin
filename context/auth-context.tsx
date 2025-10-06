@@ -79,6 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchEmployeeData = async (authId: string) => {
     try {
+      // Get current session to ensure we have valid auth token
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.error("No valid session found");
+        return;
+      }
+
       const { data: employeeData, error: employeeError } = await supabase
         .from("employees")
         .select("*")
@@ -94,13 +102,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (employeeData) {
         setEmployee(employeeData);
 
-        const { data: profileData } = await supabase
+        // Fetch employee profile with proper error handling
+        const { data: profileData, error: profileError } = await supabase
           .from("employee_profiles")
           .select("*")
           .eq("employee_id", employeeData.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle 0 or 1 rows
 
-        if (profileData) {
+        if (profileError) {
+          // Log error details for debugging but don't fail
+          console.warn("Error fetching employee profile:", {
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+          });
+        } else if (profileData) {
           setProfile(profileData);
         }
       }

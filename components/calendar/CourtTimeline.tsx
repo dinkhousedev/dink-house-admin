@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card } from "@heroui/card";
 import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Avatar } from "@heroui/avatar";
 import clsx from "clsx";
 
 import { Event, EventColors, Court } from "@/types/events";
+import { getCourts, getEvents } from "@/app/dashboard/session_booking/actions";
 
 interface CourtTimelineProps {
   date: Date;
@@ -16,65 +17,55 @@ interface CourtTimelineProps {
   onSlotClick?: (court: Court, time: string) => void;
 }
 
-// Mock courts data - replace with actual data from API
-const mockCourts: Court[] = [
-  {
-    id: "1",
-    court_number: 1,
-    name: "Court 1 - Championship",
-    surface_type: "hard",
-    status: "available",
-    max_capacity: 4,
-  },
-  {
-    id: "2",
-    court_number: 2,
-    name: "Court 2 - Tournament",
-    surface_type: "hard",
-    status: "available",
-    max_capacity: 4,
-  },
-  {
-    id: "3",
-    court_number: 3,
-    name: "Court 3 - Practice",
-    surface_type: "hard",
-    status: "available",
-    max_capacity: 4,
-  },
-  {
-    id: "4",
-    court_number: 4,
-    name: "Court 4 - Practice",
-    surface_type: "hard",
-    status: "available",
-    max_capacity: 4,
-  },
-  {
-    id: "5",
-    court_number: 5,
-    name: "Court 5 - Indoor",
-    surface_type: "indoor",
-    status: "available",
-    max_capacity: 4,
-  },
-  {
-    id: "6",
-    court_number: 6,
-    name: "Court 6 - Indoor",
-    surface_type: "indoor",
-    status: "available",
-    max_capacity: 4,
-  },
-];
-
 export function CourtTimeline({
   date,
-  courts = mockCourts,
-  events = [],
+  courts: propCourts,
+  events: propEvents,
   onEventClick,
   onSlotClick,
 }: CourtTimelineProps) {
+  const [courts, setCourts] = useState<Court[]>(propCourts || []);
+  const [events, setEvents] = useState<Event[]>(propEvents || []);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const startOfDay = new Date(date);
+
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const [courtsResult, eventsResult] = await Promise.all([
+          getCourts(),
+          getEvents(startOfDay, endOfDay),
+        ]);
+
+        if (courtsResult.success && courtsResult.data) {
+          setCourts(courtsResult.data);
+        }
+        if (eventsResult.success && eventsResult.data) {
+          setEvents(eventsResult.data);
+        }
+      } catch (error) {
+        console.error("Error fetching court timeline data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (!propCourts || !propEvents) {
+      fetchData();
+    } else {
+      setCourts(propCourts);
+      setEvents(propEvents);
+      setLoading(false);
+    }
+  }, [date, propCourts, propEvents]);
+
   const timeSlots = useMemo(() => {
     const slots = [];
 
@@ -124,6 +115,16 @@ export function CourtTimeline({
 
     return hour === now.getHours();
   };
+
+  if (loading) {
+    return (
+      <div className="h-[700px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-default-500">Loading court timeline...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ScrollShadow className="h-[700px] overflow-auto">

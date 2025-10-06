@@ -14,7 +14,7 @@ import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
 import { CourtTimeline } from "@/components/calendar/CourtTimeline";
 import { EventTemplates } from "@/components/events/EventTemplates";
-import { QuickEventModal } from "@/components/events/QuickEventModal";
+import { StaffBookingModal } from "@/components/events/StaffBookingModal";
 import { CalendarView, type CalendarViewOptions } from "@/types/events";
 
 export default function SessionBookingPage() {
@@ -23,9 +23,10 @@ export default function SessionBookingPage() {
     date: new Date(),
   });
 
-  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
 
   const handleViewChange = (view: CalendarView) => {
     setViewOptions((prev) => ({ ...prev, view }));
@@ -80,10 +81,16 @@ export default function SessionBookingPage() {
     setViewOptions((prev) => ({ ...prev, date: new Date() }));
   };
 
-  const handleQuickCreate = (date: Date, time?: string) => {
+  const handleQuickCreate = (date: Date, time?: string, court?: string) => {
     setSelectedDate(date);
     setSelectedTime(time || null);
-    setIsQuickCreateOpen(true);
+    setSelectedCourt(court || null);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleBookingSuccess = () => {
+    // Refresh calendar data
+    window.location.reload();
   };
 
   const getDateRangeDisplay = () => {
@@ -259,7 +266,7 @@ export default function SessionBookingPage() {
                   /* Handle event click */
                 }}
                 onSlotClick={(court, time) => {
-                  /* Handle court slot click */
+                  handleQuickCreate(viewOptions.date, time, court.id);
                 }}
               />
             )}
@@ -276,12 +283,14 @@ export default function SessionBookingPage() {
         />
       </div>
 
-      {/* Quick Create Modal */}
-      <QuickEventModal
+      {/* Staff Booking Modal */}
+      <StaffBookingModal
+        defaultCourt={selectedCourt}
         defaultDate={selectedDate}
         defaultTime={selectedTime}
-        isOpen={isQuickCreateOpen}
-        onClose={() => setIsQuickCreateOpen(false)}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onSuccess={handleBookingSuccess}
       />
     </div>
   );

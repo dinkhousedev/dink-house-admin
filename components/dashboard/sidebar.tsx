@@ -120,6 +120,30 @@ const navSections: NavSection[] = [
   //   ],
   // },
   {
+    key: "crowdfunding",
+    title: "Crowdfunding",
+    items: [
+      {
+        key: "contributors",
+        label: "Contributors",
+        icon: "solar:users-group-rounded-bold",
+        href: "/dashboard/crowdfunding/contributors",
+      },
+      {
+        key: "benefits",
+        label: "Benefits",
+        icon: "solar:gift-bold",
+        href: "/dashboard/crowdfunding/benefits",
+      },
+      {
+        key: "recognition",
+        label: "Recognition Items",
+        icon: "solar:medal-star-bold",
+        href: "/dashboard/crowdfunding/recognition",
+      },
+    ],
+  },
+  {
     key: "marketing",
     title: "Marketing",
     items: [
@@ -133,6 +157,7 @@ const navSections: NavSection[] = [
         key: "email-campaigns",
         label: "Email Campaigns",
         icon: "solar:station-minimalistic-outline",
+        href: "/dashboard/marketing/email-campaigns",
       },
     ],
   },
@@ -144,6 +169,7 @@ const navSections: NavSection[] = [
         key: "members",
         label: "Members",
         icon: "solar:users-group-rounded-outline",
+        href: "/admin/community/members",
       },
       {
         key: "feedback",

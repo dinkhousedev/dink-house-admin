@@ -126,8 +126,10 @@ export async function createEvent(formData: EventFormData) {
         event_type: formData.event_type,
         start_time: formData.start_time,
         end_time: formData.end_time,
+        check_in_time: formData.check_in_time,
         max_capacity: formData.max_capacity,
         min_capacity: formData.min_capacity,
+        waitlist_capacity: formData.waitlist_capacity || 5,
         skill_levels: formData.skill_levels,
         member_only: formData.member_only,
         price_member: formData.price_member,
@@ -135,6 +137,10 @@ export async function createEvent(formData: EventFormData) {
         equipment_provided: formData.equipment_provided,
         special_instructions: formData.special_instructions,
         template_id: formData.template_id,
+        staff_notes: formData.staff_notes,
+        setup_requirements: formData.setup_requirements,
+        instructor_id: formData.instructor_id,
+        registration_deadline: formData.registration_deadline,
       })
       .select()
       .single();
@@ -355,5 +361,85 @@ export async function getEventTemplates() {
     console.error("Error in getEventTemplates:", error);
 
     return { success: false, error: "Failed to fetch templates" };
+  }
+}
+
+// GET: Check court availability for a time range
+export async function checkCourtAvailability(
+  startTime: Date,
+  endTime: Date,
+  excludeEventId?: string,
+) {
+  const supabase = await createClient();
+
+  try {
+    // Get all courts
+    const courtsResult = await getCourts();
+
+    if (!courtsResult.success || !courtsResult.data) {
+      return { success: false, error: "Failed to fetch courts" };
+    }
+
+    // Get all events that overlap with the requested time range
+    let query = supabase
+      .from("events")
+      .select(
+        `
+        *,
+        event_courts (
+          court:courts (*)
+        )
+      `,
+      )
+      .eq("is_cancelled", false)
+      .lte("start_time", endTime.toISOString())
+      .gte("end_time", startTime.toISOString());
+
+    // Exclude specific event if provided (for editing)
+    if (excludeEventId) {
+      query = query.neq("id", excludeEventId);
+    }
+
+    const { data: conflictingEvents, error } = await query;
+
+    if (error) {
+      console.error("Error fetching conflicting events:", error);
+
+      return { success: false, error: error.message };
+    }
+
+    // Build availability map
+    const availability = courtsResult.data.map((court) => {
+      const conflicts =
+        conflictingEvents
+          ?.filter((event: any) =>
+            event.event_courts?.some(
+              (ec: any) => ec.court.id === court.id,
+            ),
+          )
+          .map((event: any) => ({
+            ...event,
+            courts:
+              event.event_courts?.map((ec: any) => ({
+                id: ec.court.id,
+                court_number: ec.court.court_number,
+                name: ec.court.name,
+                surface_type: ec.court.surface_type,
+                is_primary: ec.is_primary,
+              })) || [],
+          })) || [];
+
+      return {
+        court,
+        available: conflicts.length === 0,
+        conflicts,
+      };
+    });
+
+    return { success: true, data: availability };
+  } catch (error) {
+    console.error("Error in checkCourtAvailability:", error);
+
+    return { success: false, error: "Failed to check availability" };
   }
 }
