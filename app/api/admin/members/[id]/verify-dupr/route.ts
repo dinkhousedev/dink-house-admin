@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const body = await request.json();
@@ -28,9 +28,11 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
+
     // Call the verify_dupr function
     const { data, error } = await supabase.rpc("verify_dupr", {
-      p_player_id: params.id,
+      p_player_id: id,
       p_verified: verified,
       p_verified_by: verified_by,
       p_notes: notes || null,

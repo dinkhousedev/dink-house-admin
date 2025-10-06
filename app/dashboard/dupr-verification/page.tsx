@@ -14,8 +14,7 @@ import {
 import { Chip } from "@heroui/chip";
 import { Skeleton } from "@heroui/skeleton";
 import { Icon } from "@iconify/react";
-import { toast } from "@heroui/toast";
-import { useDisclosure } from "@heroui/react-utils";
+import { useDisclosure } from "@heroui/react";
 
 import { useAuth } from "@/context/auth-context";
 import VerificationModal from "@/components/dupr/VerificationModal";
