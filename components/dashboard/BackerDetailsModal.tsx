@@ -193,7 +193,7 @@ export default function BackerDetailsModal({
         .from("benefit_event_access")
         .select("*")
         .eq("backer_id", backerId)
-        .order("event_date", { ascending: true, nullsLast: true });
+        .order("event_date", { ascending: true });
 
       if (eventsError) {
         console.error("Error fetching events:", eventsError);
