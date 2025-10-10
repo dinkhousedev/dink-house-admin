@@ -17,11 +17,15 @@ export async function GET(request: NextRequest) {
 
     // Build query params
     const params = new URLSearchParams();
+
     params.append("select", "*");
 
     // Apply filters
     if (search) {
-      params.append("or", `(email.ilike.*${search}*,first_name.ilike.*${search}*,last_name.ilike.*${search}*)`);
+      params.append(
+        "or",
+        `(email.ilike.*${search}*,first_name.ilike.*${search}*,last_name.ilike.*${search}*)`,
+      );
     }
 
     if (isActive !== "all") {
@@ -48,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/launch_subscribers?${params.toString()}`,
-      { headers }
+      { headers },
     );
 
     const data = await response.json();
@@ -59,9 +63,10 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error("Database error:", data);
+
       return NextResponse.json(
         { success: false, error: "Failed to fetch subscribers" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -77,9 +82,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Subscribers API error:", error);
+
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -98,16 +104,17 @@ export async function POST(request: NextRequest) {
     // Check if email already exists
     const checkResponse = await fetch(
       `${SUPABASE_URL}/rest/v1/launch_subscribers?email=eq.${body.email}&select=id,status`,
-      { headers }
+      { headers },
     );
     const existing = await checkResponse.json();
 
     if (existing && existing.length > 0) {
       const existingSubscriber = existing[0];
+
       if (existingSubscriber.status === "active") {
         return NextResponse.json(
           { success: false, error: "Email already subscribed" },
-          { status: 409 }
+          { status: 409 },
         );
       } else {
         // Reactivate inactive subscriber
@@ -121,7 +128,7 @@ export async function POST(request: NextRequest) {
               subscribed_at: new Date().toISOString(),
               unsubscribed_at: null,
             }),
-          }
+          },
         );
 
         const data = await reactivateResponse.json();
@@ -147,16 +154,17 @@ export async function POST(request: NextRequest) {
           source: body.source || "website",
           status: "active",
         }),
-      }
+      },
     );
 
     const data = await createResponse.json();
 
     if (!createResponse.ok) {
       console.error("Database error:", data);
+
       return NextResponse.json(
         { success: false, error: "Failed to create subscriber" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -167,9 +175,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Subscribers API error:", error);
+
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

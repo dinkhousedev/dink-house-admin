@@ -9,9 +9,13 @@ if (process.env.SENDGRID_API_KEY) {
 
 // Initialize Supabase client function
 function getSupabaseClient() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.SUPABASE_SERVICE_KEY
+  ) {
     throw new Error("Supabase environment variables are not configured");
   }
+
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_KEY,
@@ -27,13 +31,16 @@ export async function POST(request: NextRequest) {
     if (!to || !subject || !message) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Get site configuration - using Supabase Cloud storage
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://dinkhousepb.com";
-    const logoUrl = process.env.LOGO_URL || 'https://wchxzbuuwssrnaxshseu.supabase.co/storage/v1/object/public/dink-files/dinklogo.jpg';
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://dinkhousepb.com";
+    const logoUrl =
+      process.env.LOGO_URL ||
+      "https://wchxzbuuwssrnaxshseu.supabase.co/storage/v1/object/public/dink-files/dinklogo.jpg";
 
     // Format the email HTML
     const htmlContent = `
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
         </div>
         <div class="content">
             <h3>${subject}</h3>
-            <div style="white-space: pre-wrap; margin: 20px 0;">${message.replace(/\n/g, '<br>')}</div>
+            <div style="white-space: pre-wrap; margin: 20px 0;">${message.replace(/\n/g, "<br>")}</div>
 
             <p style="margin-top: 30px;">If you have any further questions, please don't hesitate to reach out.</p>
 
@@ -79,11 +86,11 @@ export async function POST(request: NextRequest) {
       to,
       from: {
         email: process.env.EMAIL_FROM || "hello@dinkhousepb.com",
-        name: process.env.EMAIL_FROM_NAME || "The Dink House"
+        name: process.env.EMAIL_FROM_NAME || "The Dink House",
       },
       subject,
       html: htmlContent,
-      text: `${subject}\n\n${message}\n\nIf you have any further questions, please don't hesitate to reach out.\n\n--\nThe Dink House - Where Pickleball Lives\nVisit us at: ${siteUrl}`
+      text: `${subject}\n\n${message}\n\nIf you have any further questions, please don't hesitate to reach out.\n\n--\nThe Dink House - Where Pickleball Lives\nVisit us at: ${siteUrl}`,
     };
 
     if (process.env.SENDGRID_API_KEY) {
@@ -105,20 +112,21 @@ export async function POST(request: NextRequest) {
         p_metadata: {
           inquiry_id: inquiryId,
           type: "admin_response",
-          sent_at: new Date().toISOString()
-        }
+          sent_at: new Date().toISOString(),
+        },
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: "Response sent successfully"
+      message: "Response sent successfully",
     });
   } catch (error) {
     console.error("Error sending response:", error);
+
     return NextResponse.json(
       { error: "Failed to send response" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

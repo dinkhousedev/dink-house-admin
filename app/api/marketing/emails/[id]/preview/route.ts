@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // GET /api/marketing/emails/[id]/preview - Get email preview with sample personalization
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -36,6 +36,7 @@ export async function GET(
 
     Object.entries(sampleData).forEach(([key, value]) => {
       const placeholder = `{{${key}}}`;
+
       htmlPreview = htmlPreview.replace(new RegExp(placeholder, "g"), value);
       if (textPreview) {
         textPreview = textPreview.replace(new RegExp(placeholder, "g"), value);
@@ -55,9 +56,10 @@ export async function GET(
     });
   } catch (error) {
     console.error("API GET /marketing/emails/[id]/preview error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

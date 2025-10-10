@@ -48,7 +48,7 @@ export default function EventsCRUDTestPage() {
   // Form state
   const [formData, setFormData] = useState<EventFormData>({
     title: "Test Event",
-    event_type: "scramble",
+    event_type: "event_scramble",
     start_time: new Date().toISOString(),
     end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
     court_ids: [],
@@ -400,7 +400,8 @@ export default function EventsCRUDTestPage() {
                   ))}
                   {testResults.length === 0 && (
                     <div className="text-default-400">
-                      No tests run yet. Click "Run All Tests" to start.
+                      No tests run yet. Click &quot;Run All Tests&quot; to
+                      start.
                     </div>
                   )}
                 </div>

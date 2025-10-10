@@ -1,5 +1,7 @@
 "use client";
 
+import type { Member, MembersListResponse } from "@/types/admin/member";
+
 import { useState, useEffect, useCallback } from "react";
 import {
   Table,
@@ -18,10 +20,16 @@ import { Spinner } from "@heroui/spinner";
 import { Icon } from "@iconify/react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { useDisclosure } from "@heroui/use-disclosure";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 
 import VerifyDuprModal from "@/components/admin/VerifyDuprModal";
-
-import type { Member, MembersListResponse } from "@/types/admin/member";
+import { notify } from "@/lib/notifications";
 
 export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -33,7 +41,13 @@ export default function MembersPage() {
   const [duprFilter, setDuprFilter] = useState<string>("");
   const [membershipFilter, setMembershipFilter] = useState<string>("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -92,6 +106,37 @@ export default function MembersPage() {
     }
   };
 
+  const handleDeleteMember = async () => {
+    if (!selectedMember) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/members/${selectedMember.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Close the modal
+        onDeleteClose();
+        // Refresh the members list
+        fetchMembers();
+        // Clear selected member
+        setSelectedMember(null);
+        notify.success("Member deleted successfully");
+      } else {
+        console.error("Failed to delete member:", data.error);
+        notify.error(`Failed to delete member: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      notify.error("An error occurred while deleting the member");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="w-full p-6">
       <Card className="border border-dink-gray bg-[#0F0F0F]/90">
@@ -102,8 +147,8 @@ export default function MembersPage() {
                 Members
               </h1>
               <p className="mt-2 text-sm text-default-500">
-                Manage member profiles, verify DUPR ratings, and view transaction
-                history
+                Manage member profiles, verify DUPR ratings, and view
+                transaction history
               </p>
             </div>
             <Chip color="primary" size="lg" variant="flat">
@@ -174,24 +219,24 @@ export default function MembersPage() {
         <CardBody className="p-0">
           <Table
             aria-label="Members table"
-            classNames={{
-              wrapper: "bg-transparent shadow-none p-6",
-              th: "bg-[#151515] text-dink-white",
-              td: "text-default-500",
-            }}
             bottomContent={
               totalPages > 1 ? (
                 <div className="flex w-full justify-center p-4">
                   <Pagination
+                    showControls
                     color="primary"
                     page={page}
-                    showControls
                     total={totalPages}
                     onChange={(newPage) => setPage(newPage)}
                   />
                 </div>
               ) : null
             }
+            classNames={{
+              wrapper: "bg-transparent shadow-none p-6",
+              th: "bg-[#151515] text-dink-white",
+              td: "text-default-500",
+            }}
           >
             <TableHeader>
               <TableColumn>NAME</TableColumn>
@@ -283,12 +328,21 @@ export default function MembersPage() {
                             onOpen();
                           }}
                         >
-                          <Icon
-                            icon="solar:shield-check-linear"
-                            width={20}
-                          />
+                          <Icon icon="solar:shield-check-linear" width={20} />
                         </Button>
                       )}
+                      <Button
+                        isIconOnly
+                        className="text-danger hover:text-danger-600"
+                        size="sm"
+                        variant="light"
+                        onPress={() => {
+                          setSelectedMember(member);
+                          onDeleteOpen();
+                        }}
+                      >
+                        <Icon icon="solar:trash-bin-trash-linear" width={20} />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -305,6 +359,92 @@ export default function MembersPage() {
         onClose={onClose}
         onSuccess={fetchMembers}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        backdrop="blur"
+        classNames={{
+          base: "bg-[#0F0F0F] border border-dink-gray",
+          header: "border-b border-dink-gray",
+          body: "py-6",
+          footer: "border-t border-dink-gray",
+        }}
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">
+            <h3 className="text-xl font-bold text-dink-white">Delete Member</h3>
+          </ModalHeader>
+          <ModalBody>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3 rounded-lg bg-danger/10 p-4">
+                <Icon
+                  className="text-danger"
+                  icon="solar:danger-triangle-bold"
+                  width={32}
+                />
+                <div>
+                  <p className="font-semibold text-danger">Warning</p>
+                  <p className="text-sm text-default-500">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              {selectedMember && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-default-500">
+                    Are you sure you want to delete this member?
+                  </p>
+                  <div className="rounded-lg bg-[#151515] p-4">
+                    <p className="font-medium text-dink-white">
+                      {selectedMember.full_name}
+                    </p>
+                    <p className="text-sm text-default-400">
+                      {selectedMember.email}
+                    </p>
+                    <p className="mt-2 text-xs text-default-500">
+                      Membership:{" "}
+                      {selectedMember.membership_level.toUpperCase()}
+                    </p>
+                  </div>
+                  <div className="mt-2 rounded-lg border border-danger/30 bg-danger/5 p-3">
+                    <p className="text-sm font-medium text-danger">
+                      This will permanently delete:
+                    </p>
+                    <ul className="mt-2 list-inside list-disc text-xs text-default-500">
+                      <li>User account and profile</li>
+                      <li>All event registrations</li>
+                      <li>Membership history</li>
+                      <li>Payment records</li>
+                      <li>Profile images</li>
+                      <li>All associated data</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="default"
+              isDisabled={deleting}
+              variant="flat"
+              onPress={onDeleteClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              isLoading={deleting}
+              onPress={handleDeleteMember}
+            >
+              {deleting ? "Deleting..." : "Delete Member"}
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

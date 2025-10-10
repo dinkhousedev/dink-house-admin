@@ -5,16 +5,9 @@ import { Button } from "@heroui/button";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Input } from "@heroui/input";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableColumn,
-  TableRow,
-  TableCell,
-} from "@heroui/table";
 import { Accordion, AccordionItem } from "@heroui/accordion";
 import { Icon } from "@iconify/react";
+
 import BenefitRedemptionModal from "@/components/dashboard/BenefitRedemptionModal";
 
 interface BackerBenefit {
@@ -49,10 +42,14 @@ interface UsageHistory {
 export default function BenefitRedemptionPage() {
   const [searchEmail, setSearchEmail] = useState("");
   const [benefits, setBenefits] = useState<BackerBenefit[]>([]);
-  const [usageHistory, setUsageHistory] = useState<Record<string, UsageHistory[]>>({});
+  const [usageHistory, setUsageHistory] = useState<
+    Record<string, UsageHistory[]>
+  >({});
   const [loading, setLoading] = useState(false);
   const [backerId, setBackerId] = useState<string | null>(null);
-  const [selectedBenefit, setSelectedBenefit] = useState<BackerBenefit | null>(null);
+  const [selectedBenefit, setSelectedBenefit] = useState<BackerBenefit | null>(
+    null,
+  );
   const [showRedeemModal, setShowRedeemModal] = useState(false);
 
   const searchBacker = useCallback(async () => {
@@ -76,6 +73,7 @@ export default function BenefitRedemptionPage() {
         setBenefits([]);
         setBackerId(null);
         setLoading(false);
+
         return;
       }
 
@@ -202,21 +200,21 @@ export default function BenefitRedemptionPage() {
           <CardBody>
             <div className="flex gap-4">
               <Input
+                className="flex-1"
                 placeholder="Enter backer email address..."
+                startContent={<Icon icon="solar:magnifer-linear" width={20} />}
                 value={searchEmail}
-                onValueChange={setSearchEmail}
                 onKeyPress={(e) => {
                   if (e.key === "Enter") {
                     searchBacker();
                   }
                 }}
-                startContent={<Icon icon="solar:magnifer-linear" width={20} />}
-                className="flex-1"
+                onValueChange={setSearchEmail}
               />
               <Button
                 className="bg-[#B3FF00] text-black"
-                onPress={searchBacker}
                 isLoading={loading}
+                onPress={searchBacker}
               >
                 Search
               </Button>
@@ -246,8 +244,8 @@ export default function BenefitRedemptionPage() {
                         <div className="flex gap-4 flex-1">
                           <div className="p-3 bg-zinc-700 rounded-lg">
                             <Icon
-                              icon={getBenefitTypeIcon(benefit.benefit_type)}
                               className="text-[#B3FF00]"
+                              icon={getBenefitTypeIcon(benefit.benefit_type)}
                               width={32}
                             />
                           </div>
@@ -261,7 +259,9 @@ export default function BenefitRedemptionPage() {
                             <div className="flex gap-4 mt-2">
                               {benefit.remaining !== null && (
                                 <div>
-                                  <p className="text-xs text-gray-500">Remaining</p>
+                                  <p className="text-xs text-gray-500">
+                                    Remaining
+                                  </p>
                                   <p className="text-lg font-bold text-white">
                                     {benefit.remaining}
                                     <span className="text-sm text-gray-400">
@@ -271,19 +271,26 @@ export default function BenefitRedemptionPage() {
                                   </p>
                                 </div>
                               )}
-                              {benefit.total_used !== null && benefit.total_used > 0 && (
-                                <div>
-                                  <p className="text-xs text-gray-500">Used</p>
-                                  <p className="text-lg font-bold text-gray-400">
-                                    {benefit.total_used}
-                                  </p>
-                                </div>
-                              )}
+                              {benefit.total_used !== null &&
+                                benefit.total_used > 0 && (
+                                  <div>
+                                    <p className="text-xs text-gray-500">
+                                      Used
+                                    </p>
+                                    <p className="text-lg font-bold text-gray-400">
+                                      {benefit.total_used}
+                                    </p>
+                                  </div>
+                                )}
                               {benefit.valid_until && (
                                 <div>
-                                  <p className="text-xs text-gray-500">Valid Until</p>
+                                  <p className="text-xs text-gray-500">
+                                    Valid Until
+                                  </p>
                                   <p className="text-sm text-white">
-                                    {new Date(benefit.valid_until).toLocaleDateString()}
+                                    {new Date(
+                                      benefit.valid_until,
+                                    ).toLocaleDateString()}
                                   </p>
                                 </div>
                               )}
@@ -293,19 +300,20 @@ export default function BenefitRedemptionPage() {
                         <div className="flex flex-col gap-2">
                           <Button
                             className="bg-[#B3FF00] text-black"
-                            size="sm"
-                            onPress={() => handleRedeem(benefit)}
                             isDisabled={
                               !benefit.is_valid ||
-                              (benefit.remaining !== null && benefit.remaining <= 0)
+                              (benefit.remaining !== null &&
+                                benefit.remaining <= 0)
                             }
+                            size="sm"
+                            onPress={() => handleRedeem(benefit)}
                           >
                             Redeem
                           </Button>
                           {(benefit.total_used ?? 0) > 0 && (
                             <Button
-                              variant="flat"
                               size="sm"
+                              variant="flat"
                               onPress={() => loadUsageHistory(benefit.id)}
                             >
                               History
@@ -315,64 +323,68 @@ export default function BenefitRedemptionPage() {
                       </div>
 
                       {/* Usage History */}
-                      {usageHistory[benefit.id] && usageHistory[benefit.id].length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-zinc-700">
-                          <Accordion variant="light">
-                            <AccordionItem
-                              title={
-                                <span className="text-sm text-gray-400">
-                                  Usage History ({usageHistory[benefit.id].length})
-                                </span>
-                              }
-                            >
-                              <div className="space-y-2">
-                                {usageHistory[benefit.id].map((usage) => (
-                                  <div
-                                    key={usage.id}
-                                    className="p-3 bg-zinc-700 rounded-lg"
-                                  >
-                                    <div className="flex justify-between">
-                                      <div>
-                                        <p className="text-sm font-semibold text-white">
-                                          {usage.used_for}
-                                        </p>
-                                        <p className="text-xs text-gray-400">
-                                          {new Date(usage.usage_time).toLocaleString()}
-                                        </p>
-                                        {usage.notes && (
-                                          <p className="text-xs text-gray-500 mt-1">
-                                            {usage.notes}
+                      {usageHistory[benefit.id] &&
+                        usageHistory[benefit.id].length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-zinc-700">
+                            <Accordion variant="light">
+                              <AccordionItem
+                                title={
+                                  <span className="text-sm text-gray-400">
+                                    Usage History (
+                                    {usageHistory[benefit.id].length})
+                                  </span>
+                                }
+                              >
+                                <div className="space-y-2">
+                                  {usageHistory[benefit.id].map((usage) => (
+                                    <div
+                                      key={usage.id}
+                                      className="p-3 bg-zinc-700 rounded-lg"
+                                    >
+                                      <div className="flex justify-between">
+                                        <div>
+                                          <p className="text-sm font-semibold text-white">
+                                            {usage.used_for}
                                           </p>
-                                        )}
-                                      </div>
-                                      <div className="text-right">
-                                        <p className="text-lg font-bold text-white">
-                                          {usage.quantity_used}
-                                        </p>
-                                        {usage.staff_verified && (
-                                          <Chip
-                                            size="sm"
-                                            color="success"
-                                            variant="flat"
-                                            startContent={
-                                              <Icon
-                                                icon="solar:shield-check-bold"
-                                                width={12}
-                                              />
-                                            }
-                                          >
-                                            Verified
-                                          </Chip>
-                                        )}
+                                          <p className="text-xs text-gray-400">
+                                            {new Date(
+                                              usage.usage_time,
+                                            ).toLocaleString()}
+                                          </p>
+                                          {usage.notes && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              {usage.notes}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-lg font-bold text-white">
+                                            {usage.quantity_used}
+                                          </p>
+                                          {usage.staff_verified && (
+                                            <Chip
+                                              color="success"
+                                              size="sm"
+                                              startContent={
+                                                <Icon
+                                                  icon="solar:shield-check-bold"
+                                                  width={12}
+                                                />
+                                              }
+                                              variant="flat"
+                                            >
+                                              Verified
+                                            </Chip>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </AccordionItem>
-                          </Accordion>
-                        </div>
-                      )}
+                                  ))}
+                                </div>
+                              </AccordionItem>
+                            </Accordion>
+                          </div>
+                        )}
                     </CardBody>
                   </Card>
                 ))}
@@ -382,29 +394,32 @@ export default function BenefitRedemptionPage() {
         )}
 
         {/* No Results */}
-        {!loading && searchEmail && benefits.length === 0 && backerId === null && (
-          <Card className="bg-zinc-900">
-            <CardBody className="text-center py-12">
-              <Icon
-                icon="solar:user-cross-bold"
-                className="text-gray-600 mx-auto mb-4"
-                width={64}
-              />
-              <p className="text-xl text-gray-400">No backer found</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Try searching with a different email address
-              </p>
-            </CardBody>
-          </Card>
-        )}
+        {!loading &&
+          searchEmail &&
+          benefits.length === 0 &&
+          backerId === null && (
+            <Card className="bg-zinc-900">
+              <CardBody className="text-center py-12">
+                <Icon
+                  className="text-gray-600 mx-auto mb-4"
+                  icon="solar:user-cross-bold"
+                  width={64}
+                />
+                <p className="text-xl text-gray-400">No backer found</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Try searching with a different email address
+                </p>
+              </CardBody>
+            </Card>
+          )}
 
         {/* No Benefits */}
         {!loading && benefits.length === 0 && backerId !== null && (
           <Card className="bg-zinc-900">
             <CardBody className="text-center py-12">
               <Icon
-                icon="solar:gift-bold"
                 className="text-gray-600 mx-auto mb-4"
+                icon="solar:gift-bold"
                 width={64}
               />
               <p className="text-xl text-gray-400">No active benefits</p>
@@ -418,12 +433,12 @@ export default function BenefitRedemptionPage() {
 
       {/* Redemption Modal */}
       <BenefitRedemptionModal
+        benefit={selectedBenefit}
         isOpen={showRedeemModal}
         onClose={() => {
           setShowRedeemModal(false);
           setSelectedBenefit(null);
         }}
-        benefit={selectedBenefit}
         onSuccess={handleRedemptionSuccess}
       />
     </div>

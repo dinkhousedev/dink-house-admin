@@ -1,5 +1,7 @@
 "use client";
 
+import type { Member } from "@/types/admin/member";
+
 import { useState } from "react";
 import {
   Modal,
@@ -12,8 +14,6 @@ import { Button } from "@heroui/button";
 import { Textarea } from "@heroui/input";
 import { Chip } from "@heroui/chip";
 import { Icon } from "@iconify/react";
-
-import type { Member } from "@/types/admin/member";
 
 interface VerifyDuprModalProps {
   isOpen: boolean;
@@ -198,9 +198,7 @@ export default function VerifyDuprModal({
             className="bg-success text-success-foreground"
             isDisabled={loading}
             isLoading={loading}
-            startContent={
-              !loading && <Icon icon="solar:check-circle-bold" />
-            }
+            startContent={!loading && <Icon icon="solar:check-circle-bold" />}
             onPress={() => handleVerify(true)}
           >
             Approve & Verify

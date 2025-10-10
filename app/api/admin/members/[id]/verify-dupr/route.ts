@@ -49,7 +49,10 @@ export async function POST(
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Exception in POST /api/admin/members/[id]/verify-dupr:", error);
+    console.error(
+      "Exception in POST /api/admin/members/[id]/verify-dupr:",
+      error,
+    );
 
     return NextResponse.json(
       { success: false, error: "Internal server error" },

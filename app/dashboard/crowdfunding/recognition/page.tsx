@@ -15,7 +15,13 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Icon } from "@iconify/react";
 
 interface RecognitionItem {
@@ -56,7 +62,9 @@ export default function RecognitionItemsPage() {
   const [items, setItems] = useState<RecognitionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("pending");
-  const [selectedItem, setSelectedItem] = useState<RecognitionItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<RecognitionItem | null>(
+    null,
+  );
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -80,11 +88,13 @@ export default function RecognitionItemsPage() {
       let query = supabase
         .schema("crowdfunding")
         .from("recognition_items")
-        .select(`
+        .select(
+          `
           *,
           backer:backers(email, first_name, last_initial, phone),
           allocation:benefit_allocations(benefit_name)
-        `)
+        `,
+        )
         .order("created_at", { ascending: false });
 
       if (filterStatus && filterStatus !== "all") {
@@ -119,7 +129,8 @@ export default function RecognitionItemsPage() {
         updated_at: new Date().toISOString(),
       };
 
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split("T")[0];
+
       switch (newStatus) {
         case "ordered":
           updateData.order_date = currentDate;
@@ -178,9 +189,12 @@ export default function RecognitionItemsPage() {
 
       if (vendor) updateData.vendor = vendor;
       if (orderNumber) updateData.order_number = orderNumber;
-      if (expectedCompletion) updateData.expected_completion = expectedCompletion;
-      if (installationLocation) updateData.installation_location = installationLocation;
-      if (installationPhoto) updateData.installation_photo_url = installationPhoto;
+      if (expectedCompletion)
+        updateData.expected_completion = expectedCompletion;
+      if (installationLocation)
+        updateData.installation_location = installationLocation;
+      if (installationPhoto)
+        updateData.installation_photo_url = installationPhoto;
       if (actualCost) updateData.actual_cost = parseFloat(actualCost);
       if (updateNotes) updateData.notes = updateNotes;
 
@@ -334,13 +348,14 @@ export default function RecognitionItemsPage() {
         <Card className="bg-zinc-900">
           <CardBody>
             <Select
+              className="max-w-xs"
               label="Filter by Status"
               selectedKeys={filterStatus ? [filterStatus] : []}
               onSelectionChange={(keys) => {
                 const selected = Array.from(keys)[0];
+
                 setFilterStatus(selected as string);
               }}
-              className="max-w-xs"
             >
               <SelectItem key="all">All Items</SelectItem>
               <SelectItem key="pending">Pending Order</SelectItem>
@@ -379,14 +394,18 @@ export default function RecognitionItemsPage() {
                 <TableColumn>LOCATION</TableColumn>
                 <TableColumn>ACTIONS</TableColumn>
               </TableHeader>
-              <TableBody items={items} isLoading={loading} emptyContent="No items found">
+              <TableBody
+                emptyContent="No items found"
+                isLoading={loading}
+                items={items}
+              >
                 {(item) => (
                   <TableRow key={item.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Icon
-                          icon={getItemIcon(item.item_type)}
                           className="text-[#B3FF00]"
+                          icon={getItemIcon(item.item_type)}
                           width={24}
                         />
                         <div>
@@ -404,7 +423,9 @@ export default function RecognitionItemsPage() {
                         <p className="text-sm">
                           {item.backer.first_name} {item.backer.last_initial}.
                         </p>
-                        <p className="text-xs text-gray-500">{item.backer.email}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.backer.email}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -414,8 +435,8 @@ export default function RecognitionItemsPage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        size="sm"
                         color={getStatusColor(item.status)}
+                        size="sm"
                         variant="flat"
                       >
                         {item.status.replace("_", " ")}
@@ -430,7 +451,9 @@ export default function RecognitionItemsPage() {
                     </TableCell>
                     <TableCell>
                       {item.installation_location ? (
-                        <span className="text-sm">{item.installation_location}</span>
+                        <span className="text-sm">
+                          {item.installation_location}
+                        </span>
                       ) : (
                         <span className="text-gray-500 text-sm">Not set</span>
                       )}
@@ -448,8 +471,8 @@ export default function RecognitionItemsPage() {
                           View
                         </Button>
                         <Button
-                          size="sm"
                           className="bg-[#B3FF00] text-black"
+                          size="sm"
                           onPress={() => {
                             setSelectedItem(item);
                             setShowUpdateModal(true);
@@ -470,11 +493,11 @@ export default function RecognitionItemsPage() {
       {/* Detail View Modal */}
       <Modal
         isOpen={showDetailModal}
+        size="2xl"
         onClose={() => {
           setShowDetailModal(false);
           setSelectedItem(null);
         }}
-        size="2xl"
       >
         <ModalContent className="bg-zinc-900 text-white">
           <ModalHeader>Recognition Item Details</ModalHeader>
@@ -526,7 +549,9 @@ export default function RecognitionItemsPage() {
                   )}
                   {selectedItem.installation_location && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400">Installation Location</p>
+                      <p className="text-sm text-gray-400">
+                        Installation Location
+                      </p>
                       <p>{selectedItem.installation_location}</p>
                     </div>
                   )}
@@ -555,11 +580,7 @@ export default function RecognitionItemsPage() {
       </Modal>
 
       {/* Update Status Modal */}
-      <Modal
-        isOpen={showUpdateModal}
-        onClose={resetUpdateForm}
-        size="lg"
-      >
+      <Modal isOpen={showUpdateModal} size="lg" onClose={resetUpdateForm}>
         <ModalContent className="bg-zinc-900 text-white">
           <ModalHeader>Update Recognition Item</ModalHeader>
           <ModalBody>
@@ -568,7 +589,8 @@ export default function RecognitionItemsPage() {
                 <div>
                   <p className="text-sm text-gray-400 mb-2">
                     {formatItemType(selectedItem.item_type)} for{" "}
-                    {selectedItem.backer.first_name} {selectedItem.backer.last_initial}.
+                    {selectedItem.backer.first_name}{" "}
+                    {selectedItem.backer.last_initial}.
                   </p>
                 </div>
                 <Select
@@ -577,6 +599,7 @@ export default function RecognitionItemsPage() {
                   selectedKeys={newStatus ? [newStatus] : []}
                   onSelectionChange={(keys) => {
                     const selected = Array.from(keys)[0];
+
                     setNewStatus(selected as string);
                   }}
                 >
@@ -608,11 +631,11 @@ export default function RecognitionItemsPage() {
                 />
                 <Input
                   label="Actual Cost"
-                  type="number"
                   placeholder="0.00"
+                  startContent="$"
+                  type="number"
                   value={actualCost}
                   onValueChange={setActualCost}
-                  startContent="$"
                 />
                 <Textarea
                   label="Notes"

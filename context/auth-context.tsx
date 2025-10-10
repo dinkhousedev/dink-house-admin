@@ -80,46 +80,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchEmployeeData = async (authId: string) => {
     try {
       // Get current session to ensure we have valid auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
         console.error("No valid session found");
+
         return;
       }
 
-      const { data: employeeData, error: employeeError } = await supabase
-        .from("employees")
+      const { data: playerData, error: playerError } = await supabase
+        .from("players")
         .select("*")
-        .eq("auth_id", authId)
-        .single();
+        .eq("account_id", authId)
+        .maybeSingle();
 
-      if (employeeError) {
-        console.error("Error fetching employee:", employeeError);
+      if (playerError) {
+        console.error("Error fetching player:", playerError);
 
         return;
       }
 
-      if (employeeData) {
-        setEmployee(employeeData);
+      if (playerData) {
+        // Map player data to employee structure for compatibility
+        const mappedEmployee: Partial<Employee> = {
+          id: playerData.id,
+          auth_id: authId,
+          email: session.user.email || "",
+          first_name: playerData.first_name,
+          last_name: playerData.last_name,
+          role: "admin" as const, // Default role for admin access
+          status: "active",
+          employment_type: "full_time",
+          date_of_birth: "",
+          created_at: playerData.created_at || new Date().toISOString(),
+          updated_at: playerData.updated_at || new Date().toISOString(),
+        };
 
-        // Fetch employee profile with proper error handling
-        const { data: profileData, error: profileError } = await supabase
-          .from("employee_profiles")
-          .select("*")
-          .eq("employee_id", employeeData.id)
-          .maybeSingle(); // Use maybeSingle to handle 0 or 1 rows
+        setEmployee(mappedEmployee as Employee);
 
-        if (profileError) {
-          // Log error details for debugging but don't fail
-          console.warn("Error fetching employee profile:", {
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-          });
-        } else if (profileData) {
-          setProfile(profileData);
-        }
+        // Note: player profiles may not exist in the same way as employee profiles
+        // Skip profile fetching for now or implement player-specific profile logic
+        setProfile(null);
       }
     } catch (error) {
       console.error("Error fetching employee data:", error);

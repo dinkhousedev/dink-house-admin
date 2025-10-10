@@ -18,9 +18,10 @@ export async function GET(request: NextRequest) {
 
     if (overviewError) {
       console.error("Error fetching overview:", overviewError);
+
       return NextResponse.json(
         { error: overviewError.message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         acc.totalRecipients += row.total_recipients || 0;
         acc.totalOpens += row.total_opens || 0;
         acc.totalClicks += row.total_clicks || 0;
+
         return acc;
       },
       {
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
         totalRecipients: 0,
         totalOpens: 0,
         totalClicks: 0,
-      }
+      },
     );
 
     // Calculate average rates
@@ -75,9 +77,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("API GET /marketing/analytics/overview error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

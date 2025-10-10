@@ -29,14 +29,27 @@ interface QuickEventModalProps {
 }
 
 const eventTypes: { key: EventType; label: string; icon: string }[] = [
-  { key: "scramble", label: "Scramble", icon: "solar:game-linear" },
-  { key: "dupr", label: "DUPR", icon: "solar:chart-square-linear" },
+  { key: "event_scramble", label: "Scramble", icon: "solar:game-linear" },
+  {
+    key: "dupr_open_play",
+    label: "DUPR Open Play",
+    icon: "solar:chart-square-linear",
+  },
+  {
+    key: "dupr_tournament",
+    label: "DUPR Tournament",
+    icon: "solar:trophy-linear",
+  },
+  {
+    key: "non_dupr_tournament",
+    label: "Non-DUPR Tournament",
+    icon: "solar:trophy-linear",
+  },
   {
     key: "open_play",
     label: "Open Play",
     icon: "solar:users-group-rounded-outline",
   },
-  { key: "tournament", label: "Tournament", icon: "solar:trophy-linear" },
   { key: "league", label: "League", icon: "solar:cup-linear" },
   { key: "clinic", label: "Clinic", icon: "solar:education-linear" },
   { key: "private_lesson", label: "Private Lesson", icon: "solar:user-linear" },
@@ -49,7 +62,7 @@ export function QuickEventModal({
   defaultTime,
   onSubmit,
 }: QuickEventModalProps) {
-  const [selectedType, setSelectedType] = useState<EventType>("scramble");
+  const [selectedType, setSelectedType] = useState<EventType>("event_scramble");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(
     defaultDate ? parseDate(defaultDate.toISOString().split("T")[0]) : null,
@@ -70,21 +83,22 @@ export function QuickEventModal({
 
     // Set default values based on event type
     switch (type) {
-      case "scramble":
+      case "event_scramble":
         setDuration(120);
         setCapacity(16);
         break;
-      case "dupr":
+      case "dupr_open_play":
+      case "dupr_tournament":
         setDuration(180);
         setCapacity(12);
+        break;
+      case "non_dupr_tournament":
+        setDuration(480);
+        setCapacity(32);
         break;
       case "open_play":
         setDuration(120);
         setCapacity(20);
-        break;
-      case "tournament":
-        setDuration(480);
-        setCapacity(32);
         break;
       case "league":
         setDuration(180);

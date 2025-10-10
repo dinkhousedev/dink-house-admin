@@ -33,12 +33,14 @@ export async function GET(request: NextRequest) {
     // Pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+
     query = query.range(from, to);
 
     const { data, error, count } = await query;
 
     if (error) {
       console.error("Error fetching emails:", error);
+
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
@@ -54,9 +56,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("API GET /marketing/emails error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
         { error: "Supabase configuration missing" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         { error: data.error || "Failed to generate email" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -109,9 +112,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("API POST /marketing/emails error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

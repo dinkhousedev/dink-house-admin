@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // GET /api/marketing/emails/[id] - Get single email
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -21,6 +21,7 @@ export async function GET(
 
     if (error) {
       console.error("Error fetching email:", error);
+
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
@@ -30,9 +31,10 @@ export async function GET(
     });
   } catch (error) {
     console.error("API GET /marketing/emails/[id] error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -40,7 +42,7 @@ export async function GET(
 // PATCH /api/marketing/emails/[id] - Update email
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -50,6 +52,7 @@ export async function PATCH(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const updates: Record<string, any> = {};
+
     if (subject !== undefined) updates.subject = subject;
     if (html_content !== undefined) updates.html_content = html_content;
     if (text_content !== undefined) updates.text_content = text_content;
@@ -64,6 +67,7 @@ export async function PATCH(
 
     if (error) {
       console.error("Error updating email:", error);
+
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
@@ -74,9 +78,10 @@ export async function PATCH(
     });
   } catch (error) {
     console.error("API PATCH /marketing/emails/[id] error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,7 +89,7 @@ export async function PATCH(
 // DELETE /api/marketing/emails/[id] - Delete email
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -104,7 +109,7 @@ export async function DELETE(
     if (!["draft", "failed"].includes(email.status)) {
       return NextResponse.json(
         { error: "Can only delete draft or failed emails" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -115,6 +120,7 @@ export async function DELETE(
 
     if (error) {
       console.error("Error deleting email:", error);
+
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
@@ -124,9 +130,10 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("API DELETE /marketing/emails/[id] error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

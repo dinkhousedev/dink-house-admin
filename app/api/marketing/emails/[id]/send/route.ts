@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // POST /api/marketing/emails/[id]/send - Send email to all subscribers
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -30,7 +30,7 @@ export async function POST(
     if (!["draft", "reviewed", "failed"].includes(email.status)) {
       return NextResponse.json(
         { error: "Email has already been sent or is currently sending" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,7 +45,7 @@ export async function POST(
     if (!subscriberCount || subscriberCount === 0) {
       return NextResponse.json(
         { error: "No active subscribers found" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -69,7 +69,7 @@ export async function POST(
     if (!response.ok) {
       return NextResponse.json(
         { error: data.error || "Failed to send email" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -80,9 +80,10 @@ export async function POST(
     });
   } catch (error) {
     console.error("API POST /marketing/emails/[id]/send error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

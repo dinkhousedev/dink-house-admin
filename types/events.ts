@@ -1,13 +1,15 @@
 export type EventType =
-  | "scramble"
-  | "dupr"
-  | "open_play"
-  | "tournament"
+  | "event_scramble"
+  | "dupr_open_play"
+  | "dupr_tournament"
+  | "non_dupr_tournament"
   | "league"
   | "clinic"
-  | "private_lesson";
+  | "private_lesson"
+  | "open_play";
 
 export type CourtSurface = "hard" | "clay" | "grass" | "indoor";
+export type CourtEnvironment = "indoor" | "outdoor";
 export type CourtStatus = "available" | "maintenance" | "reserved" | "closed";
 export type SkillLevel =
   | "2.0"
@@ -35,11 +37,14 @@ export interface Court {
   court_number: number;
   name: string;
   surface_type: CourtSurface;
+  environment: CourtEnvironment;
   status: CourtStatus;
   location?: string;
   features?: string[];
   max_capacity: number;
   notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface EventTemplate {
@@ -86,6 +91,15 @@ export interface Event {
   // Requirements
   skill_levels: SkillLevel[];
   member_only: boolean;
+
+  // DUPR Fields
+  dupr_bracket_id?: string;
+  dupr_range_label?: string;
+  dupr_min_rating?: number;
+  dupr_max_rating?: number;
+  dupr_open_ended?: boolean;
+  dupr_min_inclusive?: boolean;
+  dupr_max_inclusive?: boolean;
 
   // Pricing
   price_member: number;
@@ -170,6 +184,7 @@ export interface EventRegistration {
   player_email?: string;
   player_phone?: string;
   skill_level?: SkillLevel;
+  dupr_rating?: number;
 
   // Registration details
   status: RegistrationStatus;
@@ -309,11 +324,12 @@ export interface CalendarViewOptions {
 
 // Helper type for event colors
 export const EventColors: Record<EventType, string> = {
-  scramble: "#B3FF00", // Dink Lime
-  dupr: "#0EA5E9", // Blue
-  open_play: "#FB923C", // Orange
-  tournament: "#EF4444", // Red
+  event_scramble: "#B3FF00", // Dink Lime
+  dupr_open_play: "#0EA5E9", // Blue
+  dupr_tournament: "#1D4ED8", // Indigo
+  non_dupr_tournament: "#EF4444", // Red
   league: "#8B5CF6", // Purple
   clinic: "#10B981", // Green
   private_lesson: "#64748B", // Gray
+  open_play: "#B3FF00", // Dink Lime (same as event_scramble)
 };

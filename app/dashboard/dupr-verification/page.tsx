@@ -1,5 +1,10 @@
 "use client";
 
+import type {
+  PendingDUPRVerification,
+  PendingVerificationsResponse,
+} from "@/types/player";
+
 import { useState, useEffect } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
@@ -19,16 +24,12 @@ import { useDisclosure } from "@heroui/react";
 import { useAuth } from "@/context/auth-context";
 import VerificationModal from "@/components/dupr/VerificationModal";
 import { createClient } from "@/lib/supabase/client";
-import type {
-  PendingDUPRVerification,
-  PendingVerificationsResponse,
-} from "@/types/player";
 
 export default function DUPRVerificationPage() {
   const { employee } = useAuth();
-  const [verifications, setVerifications] = useState<
-    PendingDUPRVerification[]
-  >([]);
+  const [verifications, setVerifications] = useState<PendingDUPRVerification[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] =
     useState<PendingDUPRVerification | null>(null);
@@ -93,9 +94,7 @@ export default function DUPRVerificationPage() {
       }
 
       if (data?.success) {
-        console.log(
-          data.message || "DUPR rating processed successfully",
-        );
+        console.log(data.message || "DUPR rating processed successfully");
         // Refresh the list
         await fetchPendingVerifications();
       } else {

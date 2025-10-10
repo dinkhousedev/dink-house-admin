@@ -16,6 +16,7 @@ import {
 } from "@heroui/table";
 import { Pagination } from "@heroui/pagination";
 import { Icon } from "@iconify/react";
+
 import BackerDetailsModal from "@/components/dashboard/BackerDetailsModal";
 
 interface BackerSummary {
@@ -53,7 +54,9 @@ export default function ContributorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedBacker, setSelectedBacker] = useState<BackerSummary | null>(null);
+  const [selectedBacker, setSelectedBacker] = useState<BackerSummary | null>(
+    null,
+  );
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [activeView, setActiveView] = useState<"backers" | "tiers">("backers");
   const itemsPerPage = 20;
@@ -77,26 +80,31 @@ export default function ContributorsPage() {
       const { data: tierData, error: tierError } = await supabase
         .schema("crowdfunding")
         .from("contributions")
-        .select(`
+        .select(
+          `
           tier_id,
           amount,
           contribution_tiers (name, amount),
           campaign_types (name)
-        `)
+        `,
+        )
         .eq("status", "completed");
 
       if (tierError) throw tierError;
 
       // Group by tier
       const tierMap = new Map<string, TierBreakdown>();
+
       (tierData || []).forEach((contrib: any) => {
-        const tierName = contrib.contribution_tiers?.name || "Custom Contribution";
+        const tierName =
+          contrib.contribution_tiers?.name || "Custom Contribution";
         const tierAmount = contrib.contribution_tiers?.amount || contrib.amount;
         const campaignName = contrib.campaign_types?.name || "Campaign";
         const key = `${tierName}-${campaignName}`;
 
         if (tierMap.has(key)) {
           const existing = tierMap.get(key)!;
+
           existing.contribution_count++;
           existing.total_amount += contrib.amount;
         } else {
@@ -111,8 +119,9 @@ export default function ContributorsPage() {
       });
 
       const breakdown = Array.from(tierMap.values()).sort(
-        (a, b) => b.total_amount - a.total_amount
+        (a, b) => b.total_amount - a.total_amount,
       );
+
       setTierBreakdown(breakdown);
     } catch (error) {
       console.error("Error fetching backers:", error);
@@ -142,7 +151,7 @@ export default function ContributorsPage() {
 
   const paginatedBackers = filteredBackers.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const totalPages = Math.ceil(filteredBackers.length / itemsPerPage);
@@ -179,7 +188,11 @@ export default function ContributorsPage() {
               View all crowdfunding backers and their benefits
             </p>
           </div>
-          <Chip size="lg" variant="flat" className="bg-[#B3FF00]/20 text-[#B3FF00]">
+          <Chip
+            className="bg-[#B3FF00]/20 text-[#B3FF00]"
+            size="lg"
+            variant="flat"
+          >
             {backers.length} Total Backers
           </Chip>
         </div>
@@ -193,11 +206,15 @@ export default function ContributorsPage() {
                   <p className="text-sm text-gray-400">Total Raised</p>
                   <p className="text-2xl font-bold text-[#B3FF00] mt-1">
                     {formatCurrency(
-                      backers.reduce((sum, b) => sum + b.total_contributed, 0)
+                      backers.reduce((sum, b) => sum + b.total_contributed, 0),
                     )}
                   </p>
                 </div>
-                <Icon icon="solar:dollar-minimalistic-bold" className="text-[#B3FF00]" width={24} />
+                <Icon
+                  className="text-[#B3FF00]"
+                  icon="solar:dollar-minimalistic-bold"
+                  width={24}
+                />
               </div>
             </CardBody>
           </Card>
@@ -211,7 +228,11 @@ export default function ContributorsPage() {
                     {backers.reduce((sum, b) => sum + b.total_benefits, 0)}
                   </p>
                 </div>
-                <Icon icon="solar:gift-bold" className="text-[#B3FF00]" width={24} />
+                <Icon
+                  className="text-[#B3FF00]"
+                  icon="solar:gift-bold"
+                  width={24}
+                />
               </div>
             </CardBody>
           </Card>
@@ -225,7 +246,11 @@ export default function ContributorsPage() {
                     {backers.reduce((sum, b) => sum + b.benefits_unclaimed, 0)}
                   </p>
                 </div>
-                <Icon icon="solar:clock-circle-bold" className="text-yellow-500" width={24} />
+                <Icon
+                  className="text-yellow-500"
+                  icon="solar:clock-circle-bold"
+                  width={24}
+                />
               </div>
             </CardBody>
           </Card>
@@ -239,7 +264,11 @@ export default function ContributorsPage() {
                     {backers.reduce((sum, b) => sum + b.benefits_claimed, 0)}
                   </p>
                 </div>
-                <Icon icon="solar:check-circle-bold" className="text-green-500" width={24} />
+                <Icon
+                  className="text-green-500"
+                  icon="solar:check-circle-bold"
+                  width={24}
+                />
               </div>
             </CardBody>
           </Card>
@@ -251,14 +280,22 @@ export default function ContributorsPage() {
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
                 <Button
-                  className={activeView === "backers" ? "bg-[#B3FF00] text-black font-semibold" : "bg-zinc-800 text-white"}
+                  className={
+                    activeView === "backers"
+                      ? "bg-[#B3FF00] text-black font-semibold"
+                      : "bg-zinc-800 text-white"
+                  }
                   onPress={() => setActiveView("backers")}
                 >
                   <Icon icon="solar:users-group-rounded-bold" width={20} />
                   Backers View
                 </Button>
                 <Button
-                  className={activeView === "tiers" ? "bg-[#B3FF00] text-black font-semibold" : "bg-zinc-800 text-white"}
+                  className={
+                    activeView === "tiers"
+                      ? "bg-[#B3FF00] text-black font-semibold"
+                      : "bg-zinc-800 text-white"
+                  }
                   onPress={() => setActiveView("tiers")}
                 >
                   <Icon icon="solar:chart-bold" width={20} />
@@ -275,23 +312,28 @@ export default function ContributorsPage() {
             <CardBody>
               <div className="flex gap-4">
                 <Input
+                  className="max-w-md"
                   placeholder="Search by name or email..."
+                  startContent={
+                    <Icon icon="solar:magnifer-linear" width={20} />
+                  }
                   value={searchQuery}
                   onValueChange={setSearchQuery}
-                  startContent={<Icon icon="solar:magnifer-linear" width={20} />}
-                  className="max-w-md"
                 />
                 <Select
+                  className="max-w-xs"
                   label="Filter by Status"
                   selectedKeys={filterStatus ? [filterStatus] : []}
                   onSelectionChange={(keys) => {
                     const selected = Array.from(keys)[0];
+
                     setFilterStatus(selected as string);
                   }}
-                  className="max-w-xs"
                 >
                   <SelectItem key="all">All Backers</SelectItem>
-                  <SelectItem key="unclaimed">Has Unclaimed Benefits</SelectItem>
+                  <SelectItem key="unclaimed">
+                    Has Unclaimed Benefits
+                  </SelectItem>
                   <SelectItem key="claimed">Has Claimed Benefits</SelectItem>
                   <SelectItem key="expiring">Benefits Expiring Soon</SelectItem>
                 </Select>
@@ -309,139 +351,154 @@ export default function ContributorsPage() {
               </h2>
             </CardHeader>
             <CardBody>
-            <Table
-              aria-label="Backers table"
-              className="dark"
-              classNames={{
-                wrapper: "bg-zinc-900",
-                th: "bg-zinc-800 text-white",
-                td: "text-gray-300",
-              }}
-            >
-              <TableHeader>
-                <TableColumn>BACKER</TableColumn>
-                <TableColumn>LOCATION</TableColumn>
-                <TableColumn>TOTAL CONTRIBUTED</TableColumn>
-                <TableColumn>CONTRIBUTIONS</TableColumn>
-                <TableColumn>BENEFITS</TableColumn>
-                <TableColumn>STATUS</TableColumn>
-                <TableColumn>ACTIONS</TableColumn>
-              </TableHeader>
-              <TableBody
-                items={paginatedBackers}
-                isLoading={loading}
-                emptyContent="No backers found"
+              <Table
+                aria-label="Backers table"
+                className="dark"
+                classNames={{
+                  wrapper: "bg-zinc-900",
+                  th: "bg-zinc-800 text-white",
+                  td: "text-gray-300",
+                }}
               >
-                {(backer) => (
-                  <TableRow key={backer.backer_id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold text-white">
-                          {backer.first_name} {backer.last_initial}.
-                        </p>
-                        <p className="text-sm text-gray-400">{backer.email}</p>
-                        {backer.phone && (
-                          <p className="text-xs text-gray-500">{backer.phone}</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {backer.city && backer.state ? (
-                        <span className="text-sm">
-                          {backer.city}, {backer.state}
-                        </span>
-                      ) : backer.city || backer.state ? (
-                        <span className="text-sm">{backer.city || backer.state}</span>
-                      ) : (
-                        <span className="text-gray-500">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-bold text-[#B3FF00]">
-                          {formatCurrency(backer.total_contributed)}
-                        </p>
-                        {backer.highest_tier_amount && (
-                          <p className="text-xs text-gray-500">
-                            Top tier: {formatCurrency(backer.highest_tier_amount)}
+                <TableHeader>
+                  <TableColumn>BACKER</TableColumn>
+                  <TableColumn>LOCATION</TableColumn>
+                  <TableColumn>TOTAL CONTRIBUTED</TableColumn>
+                  <TableColumn>CONTRIBUTIONS</TableColumn>
+                  <TableColumn>BENEFITS</TableColumn>
+                  <TableColumn>STATUS</TableColumn>
+                  <TableColumn>ACTIONS</TableColumn>
+                </TableHeader>
+                <TableBody
+                  emptyContent="No backers found"
+                  isLoading={loading}
+                  items={paginatedBackers}
+                >
+                  {(backer) => (
+                    <TableRow key={backer.backer_id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-semibold text-white">
+                            {backer.first_name} {backer.last_initial}.
                           </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="sm" variant="flat">
-                        {backer.contribution_count}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {backer.total_benefits === 0 ? (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <p className="text-sm text-gray-400">
+                            {backer.email}
+                          </p>
+                          {backer.phone && (
+                            <p className="text-xs text-gray-500">
+                              {backer.phone}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {backer.city && backer.state ? (
+                          <span className="text-sm">
+                            {backer.city}, {backer.state}
+                          </span>
+                        ) : backer.city || backer.state ? (
+                          <span className="text-sm">
+                            {backer.city || backer.state}
+                          </span>
                         ) : (
-                          <>
-                            {backer.benefits_unclaimed > 0 && (
-                              <Chip size="sm" color="warning" variant="flat">
-                                {backer.benefits_unclaimed} unclaimed
-                              </Chip>
-                            )}
-                            {backer.benefits_claimed > 0 && (
-                              <Chip size="sm" color="success" variant="flat">
-                                {backer.benefits_claimed} claimed
-                              </Chip>
-                            )}
-                          </>
+                          <span className="text-gray-500">—</span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {backer.total_benefits === 0 ? (
-                        <Chip size="sm" variant="flat" className="bg-zinc-800 text-gray-400">
-                          Donor
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-bold text-[#B3FF00]">
+                            {formatCurrency(backer.total_contributed)}
+                          </p>
+                          {backer.highest_tier_amount && (
+                            <p className="text-xs text-gray-500">
+                              Top tier:{" "}
+                              {formatCurrency(backer.highest_tier_amount)}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Chip size="sm" variant="flat">
+                          {backer.contribution_count}
                         </Chip>
-                      ) : backer.benefits_expiring_soon > 0 ? (
-                        <Chip size="sm" color="danger" variant="flat">
-                          <Icon icon="solar:danger-circle-bold" width={14} className="mr-1" />
-                          Expiring
-                        </Chip>
-                      ) : backer.benefits_unclaimed > 0 ? (
-                        <Chip size="sm" color="warning" variant="flat">
-                          Pending
-                        </Chip>
-                      ) : (
-                        <Chip size="sm" color="success" variant="flat">
-                          Current
-                        </Chip>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        className="bg-[#B3FF00] text-black font-semibold"
-                        onPress={() => handleViewDetails(backer)}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {backer.total_benefits === 0 ? (
+                            <span className="text-gray-500 text-sm">—</span>
+                          ) : (
+                            <>
+                              {backer.benefits_unclaimed > 0 && (
+                                <Chip color="warning" size="sm" variant="flat">
+                                  {backer.benefits_unclaimed} unclaimed
+                                </Chip>
+                              )}
+                              {backer.benefits_claimed > 0 && (
+                                <Chip color="success" size="sm" variant="flat">
+                                  {backer.benefits_claimed} claimed
+                                </Chip>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {backer.total_benefits === 0 ? (
+                          <Chip
+                            className="bg-zinc-800 text-gray-400"
+                            size="sm"
+                            variant="flat"
+                          >
+                            Donor
+                          </Chip>
+                        ) : backer.benefits_expiring_soon > 0 ? (
+                          <Chip color="danger" size="sm" variant="flat">
+                            <Icon
+                              className="mr-1"
+                              icon="solar:danger-circle-bold"
+                              width={14}
+                            />
+                            Expiring
+                          </Chip>
+                        ) : backer.benefits_unclaimed > 0 ? (
+                          <Chip color="warning" size="sm" variant="flat">
+                            Pending
+                          </Chip>
+                        ) : (
+                          <Chip color="success" size="sm" variant="flat">
+                            Current
+                          </Chip>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          className="bg-[#B3FF00] text-black font-semibold"
+                          size="sm"
+                          onPress={() => handleViewDetails(backer)}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
 
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-4">
-                <Pagination
-                  total={totalPages}
-                  page={currentPage}
-                  onChange={setCurrentPage}
-                  classNames={{
-                    item: "bg-zinc-800 text-white",
-                    cursor: "bg-[#B3FF00] text-black",
-                  }}
-                />
-              </div>
-            )}
-          </CardBody>
-        </Card>
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-4">
+                  <Pagination
+                    classNames={{
+                      item: "bg-zinc-800 text-white",
+                      cursor: "bg-[#B3FF00] text-black",
+                    }}
+                    page={currentPage}
+                    total={totalPages}
+                    onChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </CardBody>
+          </Card>
         ) : (
           <Card className="bg-zinc-900">
             <CardHeader className="border-b border-zinc-800">
@@ -468,17 +525,21 @@ export default function ContributorsPage() {
                   <TableColumn>AVG PER CONTRIBUTOR</TableColumn>
                 </TableHeader>
                 <TableBody
-                  items={tierBreakdown}
-                  isLoading={loading}
                   emptyContent="No tier data found"
+                  isLoading={loading}
+                  items={tierBreakdown}
                 >
                   {(tier) => (
                     <TableRow key={`${tier.tier_name}-${tier.campaign_name}`}>
                       <TableCell>
-                        <p className="font-semibold text-white">{tier.tier_name}</p>
+                        <p className="font-semibold text-white">
+                          {tier.tier_name}
+                        </p>
                       </TableCell>
                       <TableCell>
-                        <p className="text-sm text-gray-400">{tier.campaign_name}</p>
+                        <p className="text-sm text-gray-400">
+                          {tier.campaign_name}
+                        </p>
                       </TableCell>
                       <TableCell>
                         <p className="text-white font-semibold">
@@ -486,7 +547,11 @@ export default function ContributorsPage() {
                         </p>
                       </TableCell>
                       <TableCell>
-                        <Chip size="sm" variant="flat" className="bg-[#B3FF00]/20 text-[#B3FF00]">
+                        <Chip
+                          className="bg-[#B3FF00]/20 text-[#B3FF00]"
+                          size="sm"
+                          variant="flat"
+                        >
                           {tier.contribution_count}
                         </Chip>
                       </TableCell>
@@ -497,7 +562,9 @@ export default function ContributorsPage() {
                       </TableCell>
                       <TableCell>
                         <p className="text-white">
-                          {formatCurrency(tier.total_amount / tier.contribution_count)}
+                          {formatCurrency(
+                            tier.total_amount / tier.contribution_count,
+                          )}
                         </p>
                       </TableCell>
                     </TableRow>
@@ -509,23 +576,39 @@ export default function ContributorsPage() {
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="bg-zinc-800">
                   <CardBody className="p-4">
-                    <p className="text-xs text-gray-400 uppercase mb-1">Total Tiers</p>
-                    <p className="text-2xl font-bold text-white">{tierBreakdown.length}</p>
-                  </CardBody>
-                </Card>
-                <Card className="bg-zinc-800">
-                  <CardBody className="p-4">
-                    <p className="text-xs text-gray-400 uppercase mb-1">Total Contributions</p>
+                    <p className="text-xs text-gray-400 uppercase mb-1">
+                      Total Tiers
+                    </p>
                     <p className="text-2xl font-bold text-white">
-                      {tierBreakdown.reduce((sum, t) => sum + t.contribution_count, 0)}
+                      {tierBreakdown.length}
                     </p>
                   </CardBody>
                 </Card>
                 <Card className="bg-zinc-800">
                   <CardBody className="p-4">
-                    <p className="text-xs text-gray-400 uppercase mb-1">Total Raised (All Tiers)</p>
+                    <p className="text-xs text-gray-400 uppercase mb-1">
+                      Total Contributions
+                    </p>
+                    <p className="text-2xl font-bold text-white">
+                      {tierBreakdown.reduce(
+                        (sum, t) => sum + t.contribution_count,
+                        0,
+                      )}
+                    </p>
+                  </CardBody>
+                </Card>
+                <Card className="bg-zinc-800">
+                  <CardBody className="p-4">
+                    <p className="text-xs text-gray-400 uppercase mb-1">
+                      Total Raised (All Tiers)
+                    </p>
                     <p className="text-2xl font-bold text-[#B3FF00]">
-                      {formatCurrency(tierBreakdown.reduce((sum, t) => sum + t.total_amount, 0))}
+                      {formatCurrency(
+                        tierBreakdown.reduce(
+                          (sum, t) => sum + t.total_amount,
+                          0,
+                        ),
+                      )}
                     </p>
                   </CardBody>
                 </Card>
@@ -538,9 +621,9 @@ export default function ContributorsPage() {
       {/* Details Modal */}
       {selectedBacker && (
         <BackerDetailsModal
+          backerId={selectedBacker.backer_id}
           isOpen={showDetailsModal}
           onClose={handleCloseModal}
-          backerId={selectedBacker.backer_id}
         />
       )}
     </div>

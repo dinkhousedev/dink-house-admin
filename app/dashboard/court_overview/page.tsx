@@ -18,8 +18,14 @@ import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Icon } from "@iconify/react";
 import { format, parseISO } from "date-fns";
 
-import { getEvents, getCourts } from "@/app/dashboard/session_booking/actions";
+import {
+  getEvents,
+  getCourts,
+  getOpenPlayInstances,
+} from "@/app/dashboard/session_booking/actions";
 import { Event, Court, EventColors } from "@/types/events";
+import { OpenPlayEditModal } from "@/components/events/OpenPlayEditModal";
+import { EventEditModal } from "@/components/events/EventEditModal";
 
 interface CourtWithBookings extends Court {
   bookings: Event[];
@@ -37,16 +43,32 @@ export default function CourtOverviewPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
 
+  // Open Play Edit Modal State
+  const [isOpenPlayEditOpen, setIsOpenPlayEditOpen] = useState(false);
+  const [editOpenPlayId, setEditOpenPlayId] = useState<string | null>(null);
+  const [editOpenPlayInstanceDate, setEditOpenPlayInstanceDate] = useState<
+    string | null
+  >(null);
+  const [editOpenPlayMode, setEditOpenPlayMode] = useState<
+    "series" | "instance"
+  >("series");
+
+  // Event Edit Modal State
+  const [isEventEditOpen, setIsEventEditOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState<Event | null>(null);
+
+  // Open Play Choice Modal State
+  const [isOpenPlayChoiceModalOpen, setIsOpenPlayChoiceModalOpen] =
+    useState(false);
+  const [pendingOpenPlayEvent, setPendingOpenPlayEvent] =
+    useState<Event | null>(null);
+
   const indoorCourts = courts
-    .filter(
-      (court) => court.surface_type === "indoor" || court.court_number <= 5,
-    )
+    .filter((court) => court.environment === "indoor")
     .slice(0, 5);
 
   const outdoorCourts = courts
-    .filter(
-      (court) => court.surface_type !== "indoor" || court.court_number > 5,
-    )
+    .filter((court) => court.environment === "outdoor")
     .slice(0, 5);
 
   useEffect(() => {
@@ -56,23 +78,39 @@ export default function CourtOverviewPage() {
   const fetchCourtsAndBookings = async () => {
     setLoading(true);
     try {
-      const startOfDay = new Date(selectedDate);
+      // Format date as YYYY-MM-DD to avoid timezone conversion issues
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
 
-      startOfDay.setHours(0, 0, 0, 0);
+      // Create ISO timestamp strings for the selected day (no timezone conversion)
+      const startOfDayStr = `${dateStr}T00:00:00`;
+      const endOfDayStr = `${dateStr}T23:59:59`;
 
-      const endOfDay = new Date(selectedDate);
-
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const [courtsResult, eventsResult] = await Promise.all([
+      // Fetch courts, regular events, AND open play sessions
+      const [courtsResult, eventsResult, openPlayResult] = await Promise.all([
         getCourts(),
-        getEvents(startOfDay, endOfDay),
+        getEvents(startOfDayStr, endOfDayStr),
+        getOpenPlayInstances(dateStr, dateStr),
       ]);
 
       if (courtsResult.success && courtsResult.data) {
+        const regularEvents = eventsResult.data || [];
+        const openPlaySessions = openPlayResult.data || [];
+
+        // Merge both event types
+        const allEvents = [...regularEvents, ...openPlaySessions];
+
+        console.log("[CourtOverview] Regular events:", regularEvents.length);
+        console.log(
+          "[CourtOverview] Open play sessions:",
+          openPlaySessions.length,
+        );
+
         const courtsWithBookings = courtsResult.data.map((court) => {
           const courtBookings =
-            eventsResult.data?.filter((event) =>
+            allEvents.filter((event) =>
               event.courts?.some(
                 (c: any) => c.court_number === court.court_number,
               ),
@@ -111,10 +149,67 @@ export default function CourtOverviewPage() {
     router.push(`/dashboard/session_booking?${params}`);
   };
 
-  const handleBookingChipClick = (event: Event, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedEvent(event);
-    setEventDetailsOpen(true);
+  const handleBookingChipClick = (event: Event, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
+    // Check if this is an open play event
+    if (event.event_type === "open_play" || (event as any).is_open_play) {
+      // Show modal to ask user if they want to edit series or just this instance
+      setPendingOpenPlayEvent(event);
+      setIsOpenPlayChoiceModalOpen(true);
+    } else {
+      setSelectedEvent(event);
+      setEventDetailsOpen(true);
+    }
+  };
+
+  const handleEditOpenPlaySeries = () => {
+    if (!pendingOpenPlayEvent) return;
+
+    setEditOpenPlayId((pendingOpenPlayEvent as any).schedule_block_id);
+    setEditOpenPlayInstanceDate(
+      (pendingOpenPlayEvent as any).instance_date ||
+        new Date(pendingOpenPlayEvent.start_time).toISOString().split("T")[0],
+    );
+    setEditOpenPlayMode("series");
+    setIsOpenPlayEditOpen(true);
+    setIsOpenPlayChoiceModalOpen(false);
+    setPendingOpenPlayEvent(null);
+  };
+
+  const handleEditOpenPlayInstance = () => {
+    if (!pendingOpenPlayEvent) return;
+
+    setEditOpenPlayId((pendingOpenPlayEvent as any).schedule_block_id);
+    setEditOpenPlayInstanceDate(
+      (pendingOpenPlayEvent as any).instance_date ||
+        new Date(pendingOpenPlayEvent.start_time).toISOString().split("T")[0],
+    );
+    setEditOpenPlayMode("instance");
+    setIsOpenPlayEditOpen(true);
+    setIsOpenPlayChoiceModalOpen(false);
+    setPendingOpenPlayEvent(null);
+  };
+
+  const handleEditEvent = () => {
+    // Close the details modal and open the edit modal
+    setEventDetailsOpen(false);
+    setEditEvent(selectedEvent);
+    setIsEventEditOpen(true);
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
+    return days[dayOfWeek] || "Unknown";
   };
 
   const CourtCard = ({
@@ -153,11 +248,7 @@ export default function CourtOverviewPage() {
               </span>
             </div>
             {hasBookings && (
-              <Chip
-                color="success"
-                size="sm"
-                variant="flat"
-              >
+              <Chip color="success" size="sm" variant="flat">
                 {court.bookings.length} Events
               </Chip>
             )}
@@ -185,11 +276,22 @@ export default function CourtOverviewPage() {
                 >
                   <div className="flex items-center justify-between w-full text-xs">
                     <span>
-                      {format(parseISO(booking.start_time), "h:mm a")}
+                      {new Date(booking.start_time).toLocaleTimeString(
+                        "en-US",
+                        {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          timeZone: "America/Chicago",
+                        },
+                      )}
                     </span>
                     <span className="mx-1">-</span>
                     <span>
-                      {format(parseISO(booking.end_time), "h:mm a")}
+                      {new Date(booking.end_time).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        timeZone: "America/Chicago",
+                      })}
                     </span>
                   </div>
                 </Chip>
@@ -297,13 +399,16 @@ export default function CourtOverviewPage() {
             {weekDates.map((date) => (
               <Chip
                 key={date.toISOString()}
-                className={`cursor-pointer min-w-[100px] ${
+                className={`cursor-pointer !min-w-[140px] !max-w-none !h-auto ${
                   date.toDateString() === selectedDate.toDateString()
                     ? "bg-dink-lime text-black font-semibold"
                     : isToday(date)
                       ? "border-dink-lime border-2"
                       : ""
                 }`}
+                classNames={{
+                  content: "!max-w-none w-full",
+                }}
                 size="lg"
                 variant={
                   date.toDateString() === selectedDate.toDateString()
@@ -312,13 +417,11 @@ export default function CourtOverviewPage() {
                 }
                 onClick={() => setSelectedDate(date)}
               >
-                <div className="flex flex-col items-center py-1">
-                  <div className="text-xs opacity-80">
-                    {format(date, "EEE")}
+                <div className="flex flex-col items-center py-1 px-2 w-full">
+                  <div className="text-xs opacity-80 whitespace-nowrap">
+                    {format(date, "EEE, MMM")}
                   </div>
-                  <div className="text-lg font-bold">
-                    {format(date, "d")}
-                  </div>
+                  <div className="text-lg font-bold">{format(date, "d")}</div>
                 </div>
               </Chip>
             ))}
@@ -448,7 +551,7 @@ export default function CourtOverviewPage() {
                           key={booking.id}
                           isPressable
                           className="bg-dink-gray/20 border border-dink-gray/30 cursor-pointer hover:bg-dink-gray/30"
-                          onPress={() => handleBookingChipClick(booking, {} as any)}
+                          onPress={() => handleBookingChipClick(booking)}
                         >
                           <CardBody className="p-4">
                             <div className="flex items-start justify-between mb-2">
@@ -477,13 +580,22 @@ export default function CourtOverviewPage() {
                               </div>
                               <div className="text-right">
                                 <div className="text-sm font-medium text-dink-lime">
-                                  {format(
-                                    parseISO(booking.start_time),
-                                    "h:mm a",
-                                  )}
+                                  {new Date(
+                                    booking.start_time,
+                                  ).toLocaleTimeString("en-US", {
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    timeZone: "America/Chicago",
+                                  })}
                                 </div>
                                 <div className="text-xs text-dink-white/60">
-                                  {format(parseISO(booking.end_time), "h:mm a")}
+                                  {new Date(
+                                    booking.end_time,
+                                  ).toLocaleTimeString("en-US", {
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    timeZone: "America/Chicago",
+                                  })}
                                 </div>
                               </div>
                             </div>
@@ -573,7 +685,20 @@ export default function CourtOverviewPage() {
                 </div>
                 <p className="text-sm text-dink-white/60">
                   {selectedEvent &&
-                    `${format(parseISO(selectedEvent.start_time), "EEEE, MMMM d, yyyy • h:mm a")} - ${format(parseISO(selectedEvent.end_time), "h:mm a")}`}
+                    `${format(parseISO(selectedEvent.start_time), "EEEE, MMMM d, yyyy")} • ${new Date(
+                      selectedEvent.start_time,
+                    ).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      timeZone: "America/Chicago",
+                    })} - ${new Date(selectedEvent.end_time).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        timeZone: "America/Chicago",
+                      },
+                    )}`}
                 </p>
               </ModalHeader>
 
@@ -637,18 +762,21 @@ export default function CourtOverviewPage() {
                     </div>
 
                     {/* Skill Levels */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-dink-white mb-2">
-                        Skill Levels
-                      </h4>
-                      <div className="flex gap-2 flex-wrap">
-                        {selectedEvent?.skill_levels.map((level) => (
-                          <Chip key={level} size="sm" variant="bordered">
-                            {level}
-                          </Chip>
-                        ))}
-                      </div>
-                    </div>
+                    {selectedEvent?.skill_levels &&
+                      selectedEvent.skill_levels.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-dink-white mb-2">
+                            Skill Levels
+                          </h4>
+                          <div className="flex gap-2 flex-wrap">
+                            {selectedEvent.skill_levels.map((level) => (
+                              <Chip key={level} size="sm" variant="bordered">
+                                {level}
+                              </Chip>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                     {/* Setup Requirements */}
                     {selectedEvent?.setup_requirements && (
@@ -736,6 +864,139 @@ export default function CourtOverviewPage() {
               <ModalFooter>
                 <Button color="danger" variant="light" onPress={onClose}>
                   Close
+                </Button>
+                <Button
+                  className="bg-dink-lime text-black font-semibold"
+                  startContent={<Icon icon="solar:pen-bold" width={20} />}
+                  onPress={handleEditEvent}
+                >
+                  Edit Event
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Open Play Edit Modal */}
+      {editOpenPlayId && (
+        <OpenPlayEditModal
+          instanceDate={editOpenPlayInstanceDate || undefined}
+          isOpen={isOpenPlayEditOpen}
+          mode={editOpenPlayMode}
+          scheduleBlockId={editOpenPlayId}
+          onClose={() => {
+            setIsOpenPlayEditOpen(false);
+            setEditOpenPlayId(null);
+            setEditOpenPlayInstanceDate(null);
+          }}
+          onSuccess={() => {
+            fetchCourtsAndBookings();
+          }}
+        />
+      )}
+
+      {/* Event Edit Modal */}
+      <EventEditModal
+        event={editEvent}
+        isOpen={isEventEditOpen}
+        onClose={() => {
+          setIsEventEditOpen(false);
+          setEditEvent(null);
+        }}
+        onSuccess={() => {
+          fetchCourtsAndBookings();
+        }}
+      />
+
+      {/* Open Play Choice Modal */}
+      <Modal
+        className="bg-black/95 border border-dink-gray"
+        isOpen={isOpenPlayChoiceModalOpen}
+        size="lg"
+        onOpenChange={(open) => {
+          setIsOpenPlayChoiceModalOpen(open);
+          if (!open) setPendingOpenPlayEvent(null);
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h3 className="text-xl font-bold text-dink-white">
+                  Edit this open play session:
+                </h3>
+              </ModalHeader>
+
+              <Divider className="bg-dink-gray/30" />
+
+              <ModalBody className="py-6">
+                <div className="space-y-4">
+                  <Card className="bg-dink-lime/10 border border-dink-lime">
+                    <CardBody className="p-4">
+                      <p className="text-lg font-semibold text-dink-white text-center">
+                        {pendingOpenPlayEvent?.title}
+                      </p>
+                    </CardBody>
+                  </Card>
+
+                  <div className="space-y-2 text-dink-white/70">
+                    <p className="text-sm">
+                      Choose how you want to edit this open play session:
+                    </p>
+                  </div>
+                </div>
+              </ModalBody>
+
+              <Divider className="bg-dink-gray/30" />
+
+              <ModalFooter className="flex-col gap-2">
+                <Button
+                  className="w-full bg-dink-lime text-black font-semibold h-auto py-4"
+                  size="lg"
+                  startContent={<Icon icon="solar:calendar-bold" width={24} />}
+                  onPress={handleEditOpenPlaySeries}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="text-base">
+                      Edit ALL{" "}
+                      {pendingOpenPlayEvent &&
+                        getDayName((pendingOpenPlayEvent as any).day_of_week)}
+                      s
+                    </span>
+                    <span className="text-xs opacity-80">(Series)</span>
+                  </div>
+                </Button>
+                <Button
+                  className="w-full bg-dink-gray/20 text-dink-white font-semibold h-auto py-4"
+                  size="lg"
+                  startContent={
+                    <Icon icon="solar:calendar-linear" width={24} />
+                  }
+                  variant="bordered"
+                  onPress={handleEditOpenPlayInstance}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="text-base">Edit only this date</span>
+                    <span className="text-xs opacity-80">
+                      (
+                      {(pendingOpenPlayEvent as any)?.instance_date ||
+                        (pendingOpenPlayEvent
+                          ? new Date(
+                              pendingOpenPlayEvent.start_time,
+                            ).toLocaleDateString()
+                          : "")}
+                      )
+                    </span>
+                  </div>
+                </Button>
+                <Button
+                  className="w-full mt-2"
+                  color="danger"
+                  variant="light"
+                  onPress={onClose}
+                >
+                  Cancel
                 </Button>
               </ModalFooter>
             </>

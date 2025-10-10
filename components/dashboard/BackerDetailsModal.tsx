@@ -100,12 +100,15 @@ export default function BackerDetailsModal({
   const [merchandise, setMerchandise] = useState<MerchandiseItem[]>([]);
   const [events, setEvents] = useState<EventAccess[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedBenefit, setSelectedBenefit] = useState<BenefitDetail | null>(null);
+  const [selectedBenefit, setSelectedBenefit] = useState<BenefitDetail | null>(
+    null,
+  );
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimQuantity, setClaimQuantity] = useState("");
   const [claimNotes, setClaimNotes] = useState("");
   const [claiming, setClaiming] = useState(false);
-  const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+  const [selectedContribution, setSelectedContribution] =
+    useState<Contribution | null>(null);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundReason, setRefundReason] = useState("");
   const [refunding, setRefunding] = useState(false);
@@ -133,10 +136,12 @@ export default function BackerDetailsModal({
       setBacker(backerData);
 
       // Fetch ALL contributions directly using RPC to bypass view limitations
-      const { data: contribData, error: contribError } = await supabase
-        .rpc('get_backer_contributions', {
-          p_backer_id: backerId
-        });
+      const { data: contribData, error: contribError } = await supabase.rpc(
+        "get_backer_contributions",
+        {
+          p_backer_id: backerId,
+        },
+      );
 
       if (contribError) {
         console.error("Error fetching contributions via RPC:", contribError);
@@ -154,6 +159,7 @@ export default function BackerDetailsModal({
         status: c.status,
         refunded_at: c.refunded_at,
       }));
+
       setContributions(formattedContributions);
 
       // Fetch benefits - exclude recognition-only benefits
@@ -222,7 +228,9 @@ export default function BackerDetailsModal({
       const { error } = await supabase.rpc("redeem_benefit", {
         p_allocation_id: selectedBenefit.allocation_id,
         p_quantity: quantity,
-        p_used_for: claimNotes || `Claimed by staff on ${new Date().toLocaleDateString()}`,
+        p_used_for:
+          claimNotes ||
+          `Claimed by staff on ${new Date().toLocaleDateString()}`,
         p_staff_id: null, // TODO: Get actual staff ID from auth
         p_notes: claimNotes,
       });
@@ -270,11 +278,13 @@ export default function BackerDetailsModal({
         setRefundReason("");
         alert(`Refund successful: ${data[0].message}`);
       } else {
-        throw new Error(data && data[0]?.message || "Refund failed");
+        throw new Error((data && data[0]?.message) || "Refund failed");
       }
     } catch (error: any) {
       console.error("Error refunding contribution:", error);
-      alert(`Failed to refund contribution: ${error.message || "Please try again."}`);
+      alert(
+        `Failed to refund contribution: ${error.message || "Please try again."}`,
+      );
     } finally {
       setRefunding(false);
     }
@@ -340,23 +350,26 @@ export default function BackerDetailsModal({
   return (
     <>
       <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        size="5xl"
-        scrollBehavior="inside"
         classNames={{
           base: "bg-zinc-900 border-2 border-zinc-800",
           header: "border-b border-zinc-800",
           body: "py-6",
           footer: "border-t border-zinc-800",
         }}
+        isOpen={isOpen}
+        scrollBehavior="inside"
+        size="5xl"
+        onClose={onClose}
       >
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
             <h2 className="text-2xl font-bold text-white">Backer Details</h2>
             {backer && (
               <p className="text-sm text-gray-400 font-normal">
-                Member since {backer.created_at ? new Date(backer.created_at).toLocaleDateString() : 'N/A'}
+                Member since{" "}
+                {backer.backer_since
+                  ? new Date(backer.backer_since).toLocaleDateString()
+                  : "N/A"}
               </p>
             )}
           </ModalHeader>
@@ -365,8 +378,8 @@ export default function BackerDetailsModal({
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Icon
-                  icon="solar:loading-linear"
                   className="text-[#B3FF00] animate-spin"
+                  icon="solar:loading-linear"
                   width={48}
                 />
               </div>
@@ -377,21 +390,31 @@ export default function BackerDetailsModal({
                   <CardBody className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Name</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Name
+                        </p>
                         <p className="text-lg font-semibold text-white">
                           {backer.first_name} {backer.last_initial}.
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Email</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Email
+                        </p>
                         <p className="text-sm text-white">{backer.email}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Phone</p>
-                        <p className="text-sm text-white">{backer.phone || "—"}</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Phone
+                        </p>
+                        <p className="text-sm text-white">
+                          {backer.phone || "—"}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Location</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Location
+                        </p>
                         <p className="text-sm text-white">
                           {backer.city && backer.state
                             ? `${backer.city}, ${backer.state}`
@@ -399,13 +422,17 @@ export default function BackerDetailsModal({
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Total Contributed</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Total Contributed
+                        </p>
                         <p className="text-lg font-bold text-[#B3FF00]">
                           {formatCurrency(backer.total_contributed)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 uppercase mb-1">Contributions</p>
+                        <p className="text-xs text-gray-500 uppercase mb-1">
+                          Contributions
+                        </p>
                         <p className="text-lg font-semibold text-white">
                           {backer.contribution_count}
                         </p>
@@ -415,7 +442,9 @@ export default function BackerDetailsModal({
                 </Card>
 
                 {/* Tabs for Contributions, Benefits, Merchandise, and Events */}
-                {(benefits.length > 0 || merchandise.length > 0 || events.length > 0) ? (
+                {benefits.length > 0 ||
+                merchandise.length > 0 ||
+                events.length > 0 ? (
                   <Tabs
                     aria-label="Backer details tabs"
                     classNames={{
@@ -429,386 +458,25 @@ export default function BackerDetailsModal({
                       key="contributions"
                       title={
                         <div className="flex items-center gap-2">
-                          <Icon icon="solar:dollar-minimalistic-bold" width={18} />
+                          <Icon
+                            icon="solar:dollar-minimalistic-bold"
+                            width={18}
+                          />
                           <span>Contributions ({contributions.length})</span>
                         </div>
                       }
                     >
-                    <div className="space-y-3 mt-4">
-                      {contributions.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No contributions found</p>
-                      ) : (
-                        contributions.map((contribution) => (
-                          <Card key={contribution.contribution_id} className="bg-zinc-800">
-                            <CardBody className="p-4">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-white">
-                                      {contribution.tier_name}
-                                    </p>
-                                    {contribution.status === "refunded" && (
-                                      <Chip size="sm" color="danger" variant="flat">
-                                        Refunded
-                                      </Chip>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-400">
-                                    {contribution.campaign_name}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {new Date(contribution.contribution_date).toLocaleDateString()}
-                                    {contribution.refunded_at && (
-                                      <span className="text-red-400 ml-2">
-                                        • Refunded on {new Date(contribution.refunded_at).toLocaleDateString()}
-                                      </span>
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <p className={`text-xl font-bold ${contribution.status === "refunded" ? "text-gray-500 line-through" : "text-[#B3FF00]"}`}>
-                                    {formatCurrency(contribution.contribution_amount)}
-                                  </p>
-                                  {contribution.status === "completed" && (
-                                    <Button
-                                      size="sm"
-                                      color="danger"
-                                      variant="flat"
-                                      onPress={() => {
-                                        setSelectedContribution(contribution);
-                                        setShowRefundModal(true);
-                                      }}
-                                    >
-                                      Refund
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </CardBody>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  </Tab>
-
-                  <Tab
-                    key="benefits"
-                    title={
-                      <div className="flex items-center gap-2">
-                        <Icon icon="solar:gift-bold" width={18} />
-                        <span>Benefits ({benefits.length})</span>
-                      </div>
-                    }
-                  >
-                    <div className="space-y-3 mt-4">
-                      {benefits.length === 0 ? (
-                        <p className="text-gray-400 text-center py-8">No benefits allocated</p>
-                      ) : (
-                        benefits.map((benefit) => (
-                          <Card key={benefit.allocation_id} className="bg-zinc-800">
-                            <CardBody className="p-4">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex gap-3 flex-1">
-                                  <div className="p-2 bg-zinc-700 rounded-lg h-fit">
-                                    <Icon
-                                      icon={getBenefitIcon(benefit.benefit_type)}
-                                      className="text-[#B3FF00]"
-                                      width={24}
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-semibold text-white">
-                                        {benefit.benefit_name}
-                                      </p>
-                                      <Chip
-                                        size="sm"
-                                        color={getStatusColor(benefit.fulfillment_status)}
-                                        variant="flat"
-                                      >
-                                        {benefit.fulfillment_status}
-                                      </Chip>
-                                    </div>
-                                    <p className="text-xs text-gray-400">
-                                      {formatBenefitType(benefit.benefit_type)} • {benefit.tier_name}
-                                    </p>
-                                    <div className="flex gap-4 mt-2 text-sm">
-                                      {benefit.quantity_allocated !== null && (
-                                        <div>
-                                          <span className="text-gray-500">Allocated: </span>
-                                          <span className="text-white font-semibold">
-                                            {benefit.quantity_allocated}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {benefit.quantity_used !== null && benefit.quantity_used > 0 && (
-                                        <div>
-                                          <span className="text-gray-500">Used: </span>
-                                          <span className="text-yellow-500 font-semibold">
-                                            {benefit.quantity_used}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {benefit.quantity_remaining !== null && (
-                                        <div>
-                                          <span className="text-gray-500">Remaining: </span>
-                                          <span className="text-[#B3FF00] font-semibold">
-                                            {benefit.quantity_remaining}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {benefit.valid_until && (
-                                        <div>
-                                          <span className="text-gray-500">Expires: </span>
-                                          <span
-                                            className={
-                                              benefit.days_until_expiration !== null &&
-                                              benefit.days_until_expiration < 30
-                                                ? "text-red-400 font-semibold"
-                                                : "text-white"
-                                            }
-                                          >
-                                            {new Date(benefit.valid_until).toLocaleDateString()}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                {benefit.is_valid &&
-                                  benefit.fulfillment_status !== "fulfilled" &&
-                                  benefit.quantity_remaining !== 0 && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-[#B3FF00] text-black font-semibold"
-                                      onPress={() => {
-                                        setSelectedBenefit(benefit);
-                                        setClaimQuantity(
-                                          benefit.quantity_remaining?.toString() || "1"
-                                        );
-                                        setShowClaimModal(true);
-                                      }}
-                                    >
-                                      Mark as Claimed
-                                    </Button>
-                                  )}
-                              </div>
-                            </CardBody>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  </Tab>
-
-                  {/* Merchandise Tab */}
-                  {merchandise.length > 0 && (
-                    <Tab
-                      key="merchandise"
-                      title={
-                        <div className="flex items-center gap-2">
-                          <Icon icon="solar:bag-4-bold" width={18} />
-                          <span>Merchandise ({merchandise.length})</span>
-                        </div>
-                      }
-                    >
                       <div className="space-y-3 mt-4">
-                        {merchandise.map((item) => (
-                          <Card key={item.id} className="bg-zinc-800">
-                            <CardBody className="p-4">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex gap-3 flex-1">
-                                  <div className="p-2 bg-zinc-700 rounded-lg h-fit">
-                                    <Icon
-                                      icon="solar:bag-4-bold"
-                                      className="text-[#B3FF00]"
-                                      width={24}
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-semibold text-white capitalize">
-                                        {item.item_type.replace(/_/g, ' ')}
-                                      </p>
-                                      <Chip
-                                        size="sm"
-                                        color={
-                                          item.pickup_status === 'picked_up' ? 'success' :
-                                          item.pickup_status === 'ready' ? 'warning' :
-                                          'default'
-                                        }
-                                        variant="flat"
-                                      >
-                                        {item.pickup_status.replace(/_/g, ' ')}
-                                      </Chip>
-                                    </div>
-                                    <p className="text-xs text-gray-400">
-                                      {item.item_description}
-                                    </p>
-                                    <div className="flex gap-4 mt-2 text-sm">
-                                      <div>
-                                        <span className="text-gray-500">Quantity: </span>
-                                        <span className="text-white font-semibold">
-                                          {item.quantity}
-                                        </span>
-                                      </div>
-                                      {item.size && (
-                                        <div>
-                                          <span className="text-gray-500">Size: </span>
-                                          <span className="text-white font-semibold">
-                                            {item.size}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {item.ready_for_pickup_date && (
-                                        <div>
-                                          <span className="text-gray-500">Ready: </span>
-                                          <span className="text-white">
-                                            {new Date(item.ready_for_pickup_date).toLocaleDateString()}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {item.picked_up_at && (
-                                        <div>
-                                          <span className="text-gray-500">Picked up: </span>
-                                          <span className="text-[#B3FF00]">
-                                            {new Date(item.picked_up_at).toLocaleDateString()}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    {item.pickup_notes && (
-                                      <p className="text-xs text-gray-500 mt-2 italic">
-                                        Note: {item.pickup_notes}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                {item.pickup_status === 'ready' && (
-                                  <Chip
-                                    size="sm"
-                                    color="warning"
-                                    variant="solid"
-                                    className="font-semibold"
-                                  >
-                                    Ready for Pickup
-                                  </Chip>
-                                )}
-                              </div>
-                            </CardBody>
-                          </Card>
-                        ))}
-                      </div>
-                    </Tab>
-                  )}
-
-                  {/* Events Tab */}
-                  {events.length > 0 && (
-                    <Tab
-                      key="events"
-                      title={
-                        <div className="flex items-center gap-2">
-                          <Icon icon="solar:calendar-mark-bold" width={18} />
-                          <span>Events ({events.length})</span>
-                        </div>
-                      }
-                    >
-                      <div className="space-y-3 mt-4">
-                        {events.map((event) => (
-                          <Card key={event.id} className="bg-zinc-800">
-                            <CardBody className="p-4">
-                              <div className="flex justify-between items-start gap-4">
-                                <div className="flex gap-3 flex-1">
-                                  <div className="p-2 bg-zinc-700 rounded-lg h-fit">
-                                    <Icon
-                                      icon="solar:calendar-mark-bold"
-                                      className="text-[#B3FF00]"
-                                      width={24}
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <p className="font-semibold text-white">
-                                        {event.event_name}
-                                      </p>
-                                      <Chip
-                                        size="sm"
-                                        color={
-                                          event.rsvp_status === 'confirmed' ? 'success' :
-                                          event.rsvp_status === 'declined' ? 'danger' :
-                                          'default'
-                                        }
-                                        variant="flat"
-                                      >
-                                        RSVP: {event.rsvp_status}
-                                      </Chip>
-                                      {event.attendance_status === 'attended' && (
-                                        <Chip size="sm" color="success" variant="solid">
-                                          Attended
-                                        </Chip>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-gray-400 capitalize">
-                                      {event.event_type.replace(/_/g, ' ')}
-                                    </p>
-                                    <div className="flex gap-4 mt-2 text-sm">
-                                      {event.event_date && (
-                                        <div>
-                                          <span className="text-gray-500">Date: </span>
-                                          <span className="text-white font-semibold">
-                                            {new Date(event.event_date).toLocaleDateString()}
-                                          </span>
-                                          {event.event_time && (
-                                            <span className="text-gray-500 ml-2">
-                                              {event.event_time}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                      {event.guest_count_allowed > 0 && (
-                                        <div>
-                                          <span className="text-gray-500">Guests allowed: </span>
-                                          <span className="text-[#B3FF00] font-semibold">
-                                            {event.guest_count_allowed}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {event.check_in_time && (
-                                        <div>
-                                          <span className="text-gray-500">Checked in: </span>
-                                          <span className="text-white">
-                                            {new Date(event.check_in_time).toLocaleString()}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardBody>
-                          </Card>
-                        ))}
-                      </div>
-                    </Tab>
-                  )}
-                </Tabs>
-                ) : (
-                  /* Show contributions only (no benefits tab) */
-                  <Card className="bg-zinc-800">
-                    <CardHeader className="border-b border-zinc-700">
-                      <div className="flex items-center gap-2">
-                        <Icon icon="solar:dollar-minimalistic-bold" className="text-[#B3FF00]" width={20} />
-                        <h3 className="text-lg font-semibold text-white">
-                          Contributions ({contributions.length})
-                        </h3>
-                      </div>
-                    </CardHeader>
-                    <CardBody>
-                      <div className="space-y-3">
                         {contributions.length === 0 ? (
-                          <p className="text-gray-400 text-center py-8">No contributions found</p>
+                          <p className="text-gray-400 text-center py-8">
+                            No contributions found
+                          </p>
                         ) : (
                           contributions.map((contribution) => (
-                            <Card key={contribution.contribution_id} className="bg-zinc-800">
+                            <Card
+                              key={contribution.contribution_id}
+                              className="bg-zinc-800"
+                            >
                               <CardBody className="p-4">
                                 <div className="flex justify-between items-start gap-4">
                                   <div className="flex-1">
@@ -817,7 +485,11 @@ export default function BackerDetailsModal({
                                         {contribution.tier_name}
                                       </p>
                                       {contribution.status === "refunded" && (
-                                        <Chip size="sm" color="danger" variant="flat">
+                                        <Chip
+                                          color="danger"
+                                          size="sm"
+                                          variant="flat"
+                                        >
                                           Refunded
                                         </Chip>
                                       )}
@@ -826,22 +498,485 @@ export default function BackerDetailsModal({
                                       {contribution.campaign_name}
                                     </p>
                                     <p className="text-xs text-gray-500 mt-1">
-                                      {new Date(contribution.contribution_date).toLocaleDateString()}
+                                      {new Date(
+                                        contribution.contribution_date,
+                                      ).toLocaleDateString()}
                                       {contribution.refunded_at && (
                                         <span className="text-red-400 ml-2">
-                                          • Refunded on {new Date(contribution.refunded_at).toLocaleDateString()}
+                                          • Refunded on{" "}
+                                          {new Date(
+                                            contribution.refunded_at,
+                                          ).toLocaleDateString()}
                                         </span>
                                       )}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <p className={`text-xl font-bold ${contribution.status === "refunded" ? "text-gray-500 line-through" : "text-[#B3FF00]"}`}>
-                                      {formatCurrency(contribution.contribution_amount)}
+                                    <p
+                                      className={`text-xl font-bold ${contribution.status === "refunded" ? "text-gray-500 line-through" : "text-[#B3FF00]"}`}
+                                    >
+                                      {formatCurrency(
+                                        contribution.contribution_amount,
+                                      )}
                                     </p>
                                     {contribution.status === "completed" && (
                                       <Button
-                                        size="sm"
                                         color="danger"
+                                        size="sm"
+                                        variant="flat"
+                                        onPress={() => {
+                                          setSelectedContribution(contribution);
+                                          setShowRefundModal(true);
+                                        }}
+                                      >
+                                        Refund
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardBody>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </Tab>
+
+                    <Tab
+                      key="benefits"
+                      title={
+                        <div className="flex items-center gap-2">
+                          <Icon icon="solar:gift-bold" width={18} />
+                          <span>Benefits ({benefits.length})</span>
+                        </div>
+                      }
+                    >
+                      <div className="space-y-3 mt-4">
+                        {benefits.length === 0 ? (
+                          <p className="text-gray-400 text-center py-8">
+                            No benefits allocated
+                          </p>
+                        ) : (
+                          benefits.map((benefit) => (
+                            <Card
+                              key={benefit.allocation_id}
+                              className="bg-zinc-800"
+                            >
+                              <CardBody className="p-4">
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex gap-3 flex-1">
+                                    <div className="p-2 bg-zinc-700 rounded-lg h-fit">
+                                      <Icon
+                                        className="text-[#B3FF00]"
+                                        icon={getBenefitIcon(
+                                          benefit.benefit_type,
+                                        )}
+                                        width={24}
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-semibold text-white">
+                                          {benefit.benefit_name}
+                                        </p>
+                                        <Chip
+                                          color={getStatusColor(
+                                            benefit.fulfillment_status,
+                                          )}
+                                          size="sm"
+                                          variant="flat"
+                                        >
+                                          {benefit.fulfillment_status}
+                                        </Chip>
+                                      </div>
+                                      <p className="text-xs text-gray-400">
+                                        {formatBenefitType(
+                                          benefit.benefit_type,
+                                        )}{" "}
+                                        • {benefit.tier_name}
+                                      </p>
+                                      <div className="flex gap-4 mt-2 text-sm">
+                                        {benefit.quantity_allocated !==
+                                          null && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Allocated:{" "}
+                                            </span>
+                                            <span className="text-white font-semibold">
+                                              {benefit.quantity_allocated}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {benefit.quantity_used !== null &&
+                                          benefit.quantity_used > 0 && (
+                                            <div>
+                                              <span className="text-gray-500">
+                                                Used:{" "}
+                                              </span>
+                                              <span className="text-yellow-500 font-semibold">
+                                                {benefit.quantity_used}
+                                              </span>
+                                            </div>
+                                          )}
+                                        {benefit.quantity_remaining !==
+                                          null && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Remaining:{" "}
+                                            </span>
+                                            <span className="text-[#B3FF00] font-semibold">
+                                              {benefit.quantity_remaining}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {benefit.valid_until && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Expires:{" "}
+                                            </span>
+                                            <span
+                                              className={
+                                                benefit.days_until_expiration !==
+                                                  null &&
+                                                benefit.days_until_expiration <
+                                                  30
+                                                  ? "text-red-400 font-semibold"
+                                                  : "text-white"
+                                              }
+                                            >
+                                              {new Date(
+                                                benefit.valid_until,
+                                              ).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {benefit.is_valid &&
+                                    benefit.fulfillment_status !==
+                                      "fulfilled" &&
+                                    benefit.quantity_remaining !== 0 && (
+                                      <Button
+                                        className="bg-[#B3FF00] text-black font-semibold"
+                                        size="sm"
+                                        onPress={() => {
+                                          setSelectedBenefit(benefit);
+                                          setClaimQuantity(
+                                            benefit.quantity_remaining?.toString() ||
+                                              "1",
+                                          );
+                                          setShowClaimModal(true);
+                                        }}
+                                      >
+                                        Mark as Claimed
+                                      </Button>
+                                    )}
+                                </div>
+                              </CardBody>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </Tab>
+
+                    {/* Merchandise Tab */}
+                    {merchandise.length > 0 && (
+                      <Tab
+                        key="merchandise"
+                        title={
+                          <div className="flex items-center gap-2">
+                            <Icon icon="solar:bag-4-bold" width={18} />
+                            <span>Merchandise ({merchandise.length})</span>
+                          </div>
+                        }
+                      >
+                        <div className="space-y-3 mt-4">
+                          {merchandise.map((item) => (
+                            <Card key={item.id} className="bg-zinc-800">
+                              <CardBody className="p-4">
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex gap-3 flex-1">
+                                    <div className="p-2 bg-zinc-700 rounded-lg h-fit">
+                                      <Icon
+                                        className="text-[#B3FF00]"
+                                        icon="solar:bag-4-bold"
+                                        width={24}
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-semibold text-white capitalize">
+                                          {item.item_type.replace(/_/g, " ")}
+                                        </p>
+                                        <Chip
+                                          color={
+                                            item.pickup_status === "picked_up"
+                                              ? "success"
+                                              : item.pickup_status === "ready"
+                                                ? "warning"
+                                                : "default"
+                                          }
+                                          size="sm"
+                                          variant="flat"
+                                        >
+                                          {item.pickup_status.replace(
+                                            /_/g,
+                                            " ",
+                                          )}
+                                        </Chip>
+                                      </div>
+                                      <p className="text-xs text-gray-400">
+                                        {item.item_description}
+                                      </p>
+                                      <div className="flex gap-4 mt-2 text-sm">
+                                        <div>
+                                          <span className="text-gray-500">
+                                            Quantity:{" "}
+                                          </span>
+                                          <span className="text-white font-semibold">
+                                            {item.quantity}
+                                          </span>
+                                        </div>
+                                        {item.size && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Size:{" "}
+                                            </span>
+                                            <span className="text-white font-semibold">
+                                              {item.size}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {item.ready_for_pickup_date && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Ready:{" "}
+                                            </span>
+                                            <span className="text-white">
+                                              {new Date(
+                                                item.ready_for_pickup_date,
+                                              ).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {item.picked_up_at && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Picked up:{" "}
+                                            </span>
+                                            <span className="text-[#B3FF00]">
+                                              {new Date(
+                                                item.picked_up_at,
+                                              ).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {item.pickup_notes && (
+                                        <p className="text-xs text-gray-500 mt-2 italic">
+                                          Note: {item.pickup_notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {item.pickup_status === "ready" && (
+                                    <Chip
+                                      className="font-semibold"
+                                      color="warning"
+                                      size="sm"
+                                      variant="solid"
+                                    >
+                                      Ready for Pickup
+                                    </Chip>
+                                  )}
+                                </div>
+                              </CardBody>
+                            </Card>
+                          ))}
+                        </div>
+                      </Tab>
+                    )}
+
+                    {/* Events Tab */}
+                    {events.length > 0 && (
+                      <Tab
+                        key="events"
+                        title={
+                          <div className="flex items-center gap-2">
+                            <Icon icon="solar:calendar-mark-bold" width={18} />
+                            <span>Events ({events.length})</span>
+                          </div>
+                        }
+                      >
+                        <div className="space-y-3 mt-4">
+                          {events.map((event) => (
+                            <Card key={event.id} className="bg-zinc-800">
+                              <CardBody className="p-4">
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex gap-3 flex-1">
+                                    <div className="p-2 bg-zinc-700 rounded-lg h-fit">
+                                      <Icon
+                                        className="text-[#B3FF00]"
+                                        icon="solar:calendar-mark-bold"
+                                        width={24}
+                                      />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <p className="font-semibold text-white">
+                                          {event.event_name}
+                                        </p>
+                                        <Chip
+                                          color={
+                                            event.rsvp_status === "confirmed"
+                                              ? "success"
+                                              : event.rsvp_status === "declined"
+                                                ? "danger"
+                                                : "default"
+                                          }
+                                          size="sm"
+                                          variant="flat"
+                                        >
+                                          RSVP: {event.rsvp_status}
+                                        </Chip>
+                                        {event.attendance_status ===
+                                          "attended" && (
+                                          <Chip
+                                            color="success"
+                                            size="sm"
+                                            variant="solid"
+                                          >
+                                            Attended
+                                          </Chip>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-400 capitalize">
+                                        {event.event_type.replace(/_/g, " ")}
+                                      </p>
+                                      <div className="flex gap-4 mt-2 text-sm">
+                                        {event.event_date && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Date:{" "}
+                                            </span>
+                                            <span className="text-white font-semibold">
+                                              {new Date(
+                                                event.event_date,
+                                              ).toLocaleDateString()}
+                                            </span>
+                                            {event.event_time && (
+                                              <span className="text-gray-500 ml-2">
+                                                {event.event_time}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                        {event.guest_count_allowed > 0 && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Guests allowed:{" "}
+                                            </span>
+                                            <span className="text-[#B3FF00] font-semibold">
+                                              {event.guest_count_allowed}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {event.check_in_time && (
+                                          <div>
+                                            <span className="text-gray-500">
+                                              Checked in:{" "}
+                                            </span>
+                                            <span className="text-white">
+                                              {new Date(
+                                                event.check_in_time,
+                                              ).toLocaleString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardBody>
+                            </Card>
+                          ))}
+                        </div>
+                      </Tab>
+                    )}
+                  </Tabs>
+                ) : (
+                  /* Show contributions only (no benefits tab) */
+                  <Card className="bg-zinc-800">
+                    <CardHeader className="border-b border-zinc-700">
+                      <div className="flex items-center gap-2">
+                        <Icon
+                          className="text-[#B3FF00]"
+                          icon="solar:dollar-minimalistic-bold"
+                          width={20}
+                        />
+                        <h3 className="text-lg font-semibold text-white">
+                          Contributions ({contributions.length})
+                        </h3>
+                      </div>
+                    </CardHeader>
+                    <CardBody>
+                      <div className="space-y-3">
+                        {contributions.length === 0 ? (
+                          <p className="text-gray-400 text-center py-8">
+                            No contributions found
+                          </p>
+                        ) : (
+                          contributions.map((contribution) => (
+                            <Card
+                              key={contribution.contribution_id}
+                              className="bg-zinc-800"
+                            >
+                              <CardBody className="p-4">
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-semibold text-white">
+                                        {contribution.tier_name}
+                                      </p>
+                                      {contribution.status === "refunded" && (
+                                        <Chip
+                                          color="danger"
+                                          size="sm"
+                                          variant="flat"
+                                        >
+                                          Refunded
+                                        </Chip>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-400">
+                                      {contribution.campaign_name}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {new Date(
+                                        contribution.contribution_date,
+                                      ).toLocaleDateString()}
+                                      {contribution.refunded_at && (
+                                        <span className="text-red-400 ml-2">
+                                          • Refunded on{" "}
+                                          {new Date(
+                                            contribution.refunded_at,
+                                          ).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <p
+                                      className={`text-xl font-bold ${contribution.status === "refunded" ? "text-gray-500 line-through" : "text-[#B3FF00]"}`}
+                                    >
+                                      {formatCurrency(
+                                        contribution.contribution_amount,
+                                      )}
+                                    </p>
+                                    {contribution.status === "completed" && (
+                                      <Button
+                                        color="danger"
+                                        size="sm"
                                         variant="flat"
                                         onPress={() => {
                                           setSelectedContribution(contribution);
@@ -860,7 +995,11 @@ export default function BackerDetailsModal({
                       </div>
                       <div className="mt-4 p-3 bg-zinc-900 border border-zinc-700 rounded-lg">
                         <p className="text-sm text-gray-400 flex items-center gap-2">
-                          <Icon icon="solar:info-circle-bold" width={16} className="text-[#B3FF00]" />
+                          <Icon
+                            className="text-[#B3FF00]"
+                            icon="solar:info-circle-bold"
+                            width={16}
+                          />
                           This backer has no claimable benefits (donation only)
                         </p>
                       </div>
@@ -883,77 +1022,81 @@ export default function BackerDetailsModal({
 
       {/* Claim Benefit Modal */}
       <Modal
-        isOpen={showClaimModal}
-        onClose={() => {
-          setShowClaimModal(false);
-          setSelectedBenefit(null);
-          setClaimQuantity("");
-          setClaimNotes("");
-        }}
-        size="lg"
         classNames={{
           base: "bg-zinc-900 border-2 border-zinc-800",
           header: "border-b border-zinc-800",
           body: "py-6",
           footer: "border-t border-zinc-800",
         }}
+        isOpen={showClaimModal}
+        size="lg"
+        onClose={() => {
+          setShowClaimModal(false);
+          setSelectedBenefit(null);
+          setClaimQuantity("");
+          setClaimNotes("");
+        }}
       >
         <ModalContent>
           <ModalHeader>
-            <h3 className="text-xl font-bold text-white">Mark Benefit as Claimed</h3>
+            <h3 className="text-xl font-bold text-white">
+              Mark Benefit as Claimed
+            </h3>
           </ModalHeader>
           <ModalBody>
             {selectedBenefit && (
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-400">Benefit</p>
-                  <p className="font-semibold text-white">{selectedBenefit.benefit_name}</p>
+                  <p className="font-semibold text-white">
+                    {selectedBenefit.benefit_name}
+                  </p>
                 </div>
                 {selectedBenefit.quantity_allocated !== null && (
                   <Input
-                    type="number"
-                    label="Quantity to Claim"
-                    placeholder="Enter quantity"
-                    value={claimQuantity}
-                    onValueChange={setClaimQuantity}
-                    min="0"
-                    max={selectedBenefit.quantity_remaining?.toString()}
-                    description={`Available: ${selectedBenefit.quantity_remaining}`}
                     classNames={{
                       input: "bg-zinc-800 text-white",
                       inputWrapper: "bg-zinc-800 border-zinc-700",
                     }}
+                    description={`Available: ${selectedBenefit.quantity_remaining}`}
+                    label="Quantity to Claim"
+                    max={selectedBenefit.quantity_remaining?.toString()}
+                    min="0"
+                    placeholder="Enter quantity"
+                    type="number"
+                    value={claimQuantity}
+                    onValueChange={setClaimQuantity}
                   />
                 )}
                 <Textarea
-                  label="Notes (optional)"
-                  placeholder="Add notes about this redemption..."
-                  value={claimNotes}
-                  onValueChange={setClaimNotes}
                   classNames={{
                     input: "bg-zinc-800 text-white",
                     inputWrapper: "bg-zinc-800 border-zinc-700",
                   }}
+                  label="Notes (optional)"
+                  placeholder="Add notes about this redemption..."
+                  value={claimNotes}
+                  onValueChange={setClaimNotes}
                 />
               </div>
             )}
           </ModalBody>
           <ModalFooter>
             <Button
+              isDisabled={claiming}
               variant="flat"
               onPress={() => {
                 setShowClaimModal(false);
                 setSelectedBenefit(null);
               }}
-              isDisabled={claiming}
             >
               Cancel
             </Button>
             <Button
               className="bg-[#B3FF00] text-black font-semibold"
-              onPress={handleClaimBenefit}
-              isLoading={claiming}
               isDisabled={!claimQuantity || parseFloat(claimQuantity) <= 0}
+              isLoading={claiming}
+              onPress={handleClaimBenefit}
             >
               Confirm Claim
             </Button>
@@ -963,93 +1106,112 @@ export default function BackerDetailsModal({
 
       {/* Refund Contribution Modal */}
       <Modal
-        isOpen={showRefundModal}
-        onClose={() => {
-          setShowRefundModal(false);
-          setSelectedContribution(null);
-          setRefundReason("");
-        }}
-        size="lg"
         classNames={{
           base: "bg-zinc-900 border-2 border-zinc-800",
           header: "border-b border-zinc-800",
           body: "py-6",
           footer: "border-t border-zinc-800",
         }}
+        isOpen={showRefundModal}
+        size="lg"
+        onClose={() => {
+          setShowRefundModal(false);
+          setSelectedContribution(null);
+          setRefundReason("");
+        }}
       >
         <ModalContent>
           <ModalHeader>
-            <h3 className="text-xl font-bold text-white">Refund Contribution</h3>
+            <h3 className="text-xl font-bold text-white">
+              Refund Contribution
+            </h3>
           </ModalHeader>
           <ModalBody>
             {selectedContribution && (
               <div className="space-y-4">
                 <div className="p-4 bg-red-950/30 border border-red-900/50 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <Icon icon="solar:danger-triangle-bold" className="text-red-500 mt-1" width={20} />
+                    <Icon
+                      className="text-red-500 mt-1"
+                      icon="solar:danger-triangle-bold"
+                      width={20}
+                    />
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-red-400">Warning</p>
+                      <p className="text-sm font-semibold text-red-400">
+                        Warning
+                      </p>
                       <p className="text-xs text-red-300 mt-1">
-                        This will refund the contribution and deactivate all associated benefits.
-                        This action cannot be undone from the admin panel.
+                        This will refund the contribution and deactivate all
+                        associated benefits. This action cannot be undone from
+                        the admin panel.
                       </p>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Contribution Details</p>
+                  <p className="text-sm text-gray-400 mb-1">
+                    Contribution Details
+                  </p>
                   <div className="p-3 bg-zinc-800 rounded-lg space-y-1">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-400">Tier:</span>
-                      <span className="text-sm font-semibold text-white">{selectedContribution.tier_name}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {selectedContribution.tier_name}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-400">Campaign:</span>
-                      <span className="text-sm font-semibold text-white">{selectedContribution.campaign_name}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {selectedContribution.campaign_name}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-400">Amount:</span>
                       <span className="text-sm font-bold text-[#B3FF00]">
-                        {formatCurrency(selectedContribution.contribution_amount)}
+                        {formatCurrency(
+                          selectedContribution.contribution_amount,
+                        )}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-400">Date:</span>
                       <span className="text-sm text-white">
-                        {new Date(selectedContribution.contribution_date).toLocaleDateString()}
+                        {new Date(
+                          selectedContribution.contribution_date,
+                        ).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
                 </div>
                 <Textarea
-                  label="Refund Reason"
-                  placeholder="Enter reason for refund (optional)..."
-                  value={refundReason}
-                  onValueChange={setRefundReason}
                   classNames={{
                     input: "bg-zinc-800 text-white",
                     inputWrapper: "bg-zinc-800 border-zinc-700",
                   }}
+                  label="Refund Reason"
+                  placeholder="Enter reason for refund (optional)..."
+                  value={refundReason}
+                  onValueChange={setRefundReason}
                 />
               </div>
             )}
           </ModalBody>
           <ModalFooter>
             <Button
+              isDisabled={refunding}
               variant="flat"
               onPress={() => {
                 setShowRefundModal(false);
                 setSelectedContribution(null);
                 setRefundReason("");
               }}
-              isDisabled={refunding}
             >
               Cancel
             </Button>
             <Button
               color="danger"
-              onPress={handleRefundContribution}
               isLoading={refunding}
+              onPress={handleRefundContribution}
             >
               Confirm Refund
             </Button>

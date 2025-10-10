@@ -8,13 +8,13 @@ import {
 } from "@/app/dashboard/session_booking/actions";
 import { EventFormData } from "@/types/events";
 
-// GET /api/events/[id] - Get single event
+// GET /api/events/[eventId] - Get single event
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { eventId: id } = await params;
     const result = await getEvent(id);
 
     if (!result.success) {
@@ -26,7 +26,7 @@ export async function GET(
       data: result.data,
     });
   } catch (error) {
-    console.error(`API GET /events/[id] error:`, error);
+    console.error(`API GET /events/[eventId] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },
@@ -35,13 +35,13 @@ export async function GET(
   }
 }
 
-// PUT /api/events/[id] - Update event
+// PUT /api/events/[eventId] - Update event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { eventId: id } = await params;
     const body: Partial<EventFormData> = await request.json();
 
     const result = await updateEvent(id, body);
@@ -56,7 +56,7 @@ export async function PUT(
       message: "Event updated successfully",
     });
   } catch (error) {
-    console.error(`API PUT /events/[id] error:`, error);
+    console.error(`API PUT /events/[eventId] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },
@@ -65,13 +65,13 @@ export async function PUT(
   }
 }
 
-// DELETE /api/events/[id] - Delete event
+// DELETE /api/events/[eventId] - Delete event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ eventId: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { eventId: id } = await params;
     // Check for soft delete (cancel) via query param
     const searchParams = request.nextUrl.searchParams;
     const cancel = searchParams.get("cancel") === "true";
@@ -96,7 +96,7 @@ export async function DELETE(
         : "Event deleted successfully",
     });
   } catch (error) {
-    console.error(`API DELETE /events/[id] error:`, error);
+    console.error(`API DELETE /events/[eventId] error:`, error);
 
     return NextResponse.json(
       { error: "Internal server error" },

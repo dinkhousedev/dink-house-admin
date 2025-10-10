@@ -15,8 +15,12 @@ export async function GET() {
       user_role: userRole?.value || "Not found",
     },
     env: {
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? "Configured" : "Missing",
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? "Configured" : "Missing",
-    }
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
+        ? "Configured"
+        : "Missing",
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+        ? "Configured"
+        : "Missing",
+    },
   });
 }

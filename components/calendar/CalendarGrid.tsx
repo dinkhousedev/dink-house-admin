@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { Card } from "@heroui/card";
 import { Chip } from "@heroui/chip";
 import { Tooltip } from "@heroui/tooltip";
+import { Button } from "@heroui/button";
+import { Icon } from "@iconify/react";
 import clsx from "clsx";
 
 import { Event, EventColors } from "@/types/events";
@@ -13,6 +15,7 @@ interface CalendarGridProps {
   events?: Event[];
   onEventClick?: (event: Event) => void;
   onCellClick?: (date: Date) => void;
+  onShowMore?: (date: Date) => void;
 }
 
 export function CalendarGrid({
@@ -20,6 +23,7 @@ export function CalendarGrid({
   events = [],
   onEventClick,
   onCellClick,
+  onShowMore,
 }: CalendarGridProps) {
   const calendar = useMemo(() => {
     const year = date.getFullYear();
@@ -46,12 +50,16 @@ export function CalendarGrid({
 
   const getEventsForDay = (day: Date) => {
     return events.filter((event) => {
+      // Parse event time and convert to local timezone for comparison
       const eventDate = new Date(event.start_time);
 
+      // Get local date components (browser's timezone)
+      const eventLocalDate = new Date(eventDate.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+
       return (
-        eventDate.getDate() === day.getDate() &&
-        eventDate.getMonth() === day.getMonth() &&
-        eventDate.getFullYear() === day.getFullYear()
+        eventLocalDate.getDate() === day.getDate() &&
+        eventLocalDate.getMonth() === day.getMonth() &&
+        eventLocalDate.getFullYear() === day.getFullYear()
       );
     });
   };
@@ -75,7 +83,7 @@ export function CalendarGrid({
   return (
     <div className="p-4">
       {/* Week day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-2 mb-2">
         {weekDays.map((day) => (
           <div
             key={day}
@@ -87,7 +95,7 @@ export function CalendarGrid({
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-2">
         {calendar.map((day, index) => {
           const dayEvents = getEventsForDay(day);
           const isCurrentMonthDay = isCurrentMonth(day);
@@ -96,22 +104,37 @@ export function CalendarGrid({
           return (
             <Card
               key={index}
-              isPressable
               className={clsx(
-                "min-h-[120px] border border-dink-gray/30 bg-black/20 p-2 transition-all hover:bg-dink-gray/10",
+                "min-h-[140px] border border-dink-gray/50 bg-black/20 p-3 transition-all",
                 !isCurrentMonthDay && "opacity-40",
                 isTodayDay && "border-dink-lime bg-dink-lime/5",
               )}
-              onPress={() => onCellClick?.(day)}
             >
               <div className="flex flex-col h-full">
-                <div
-                  className={clsx(
-                    "text-sm font-medium mb-1",
-                    isTodayDay ? "text-dink-lime" : "text-default-600",
+                <div className="flex items-center justify-between mb-1">
+                  <div
+                    className={clsx(
+                      "text-sm font-medium",
+                      isTodayDay ? "text-dink-lime" : "text-default-600",
+                    )}
+                  >
+                    {day.getDate()}
+                  </div>
+                  {isCurrentMonthDay && (
+                    <Button
+                      isIconOnly
+                      className="h-5 w-5 min-w-5 bg-dink-lime/20 hover:bg-dink-lime/30 transition-colors"
+                      size="sm"
+                      variant="flat"
+                      onPress={() => onCellClick?.(day)}
+                    >
+                      <Icon
+                        className="text-dink-lime"
+                        icon="solar:add-circle-bold"
+                        width={14}
+                      />
+                    </Button>
                   )}
-                >
-                  {day.getDate()}
                 </div>
 
                 <div className="flex-1 space-y-1 overflow-hidden">
@@ -122,14 +145,16 @@ export function CalendarGrid({
                         <div className="p-2">
                           <p className="font-semibold">{event.title}</p>
                           <p className="text-xs">
-                            {new Date(event.start_time).toLocaleTimeString([], {
+                            {new Date(event.start_time).toLocaleTimeString('en-US', {
                               hour: "2-digit",
                               minute: "2-digit",
+                              timeZone: "America/Chicago",
                             })}
                             {" - "}
-                            {new Date(event.end_time).toLocaleTimeString([], {
+                            {new Date(event.end_time).toLocaleTimeString('en-US', {
                               hour: "2-digit",
                               minute: "2-digit",
+                              timeZone: "America/Chicago",
                             })}
                           </p>
                           <p className="text-xs">
@@ -140,12 +165,15 @@ export function CalendarGrid({
                       }
                     >
                       <Chip
-                        className="w-full text-xs cursor-pointer truncate"
+                        className="w-full text-[10px] cursor-pointer"
                         size="sm"
                         style={{
                           backgroundColor: `${EventColors[event.event_type]}20`,
                           borderColor: EventColors[event.event_type],
                           borderWidth: "1px",
+                          whiteSpace: "normal",
+                          height: "auto",
+                          minHeight: "20px",
                         }}
                         variant="flat"
                         onClick={(e) => {
@@ -154,8 +182,11 @@ export function CalendarGrid({
                         }}
                       >
                         <span
-                          className="truncate"
-                          style={{ color: EventColors[event.event_type] }}
+                          className="block leading-tight py-0.5"
+                          style={{
+                            color: EventColors[event.event_type],
+                            wordBreak: "break-word",
+                          }}
                         >
                           {event.title}
                         </span>
@@ -164,7 +195,22 @@ export function CalendarGrid({
                   ))}
 
                   {dayEvents.length > 3 && (
-                    <div className="text-xs text-default-400 text-center">
+                    <div
+                      className="text-xs text-dink-lime hover:text-dink-lime/80 text-center w-full py-1 transition-colors font-medium cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShowMore?.(day);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onShowMore?.(day);
+                        }
+                      }}
+                    >
                       +{dayEvents.length - 3} more
                     </div>
                   )}

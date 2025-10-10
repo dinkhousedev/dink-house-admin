@@ -14,7 +14,13 @@ import {
   TableRow,
   TableCell,
 } from "@heroui/table";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Pagination } from "@heroui/pagination";
 import { Icon } from "@iconify/react";
 
@@ -155,12 +161,13 @@ export default function BenefitManagementPage() {
       benefit.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       benefit.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       benefit.benefit_name.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesSearch;
   });
 
   const paginatedBenefits = filteredBenefits.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const totalPages = Math.ceil(filteredBenefits.length / itemsPerPage);
@@ -195,7 +202,9 @@ export default function BenefitManagementPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Benefit Fulfillment</h1>
+            <h1 className="text-3xl font-bold text-white">
+              Benefit Fulfillment
+            </h1>
             <p className="text-gray-400 mt-1">
               Track and manage crowdfunding benefit redemptions
             </p>
@@ -217,16 +226,16 @@ export default function BenefitManagementPage() {
                     </p>
                   </div>
                   <Icon
-                    icon="solar:gift-bold"
                     className="text-[#B3FF00]"
+                    icon="solar:gift-bold"
                     width={24}
                   />
                 </div>
                 <div className="flex gap-2 mt-3 text-xs">
-                  <Chip size="sm" color="warning" variant="flat">
+                  <Chip color="warning" size="sm" variant="flat">
                     {item.pending_count} pending
                   </Chip>
-                  <Chip size="sm" color="success" variant="flat">
+                  <Chip color="success" size="sm" variant="flat">
                     {item.fulfilled_count} done
                   </Chip>
                 </div>
@@ -240,28 +249,31 @@ export default function BenefitManagementPage() {
           <CardBody>
             <div className="flex gap-4">
               <Input
+                className="max-w-md"
                 placeholder="Search by name, email, or benefit..."
+                startContent={<Icon icon="solar:magnifer-linear" width={20} />}
                 value={searchQuery}
                 onValueChange={setSearchQuery}
-                startContent={
-                  <Icon icon="solar:magnifer-linear" width={20} />
-                }
-                className="max-w-md"
               />
               <Select
+                className="max-w-xs"
                 label="Filter by Type"
                 selectedKeys={filterType ? [filterType] : []}
                 onSelectionChange={(keys) => {
                   const selected = Array.from(keys)[0];
+
                   setFilterType(selected as string);
                 }}
-                className="max-w-xs"
               >
                 <SelectItem key="all">All Types</SelectItem>
                 <SelectItem key="court_time_hours">Court Time</SelectItem>
                 <SelectItem key="dink_board_sessions">Dink Board</SelectItem>
-                <SelectItem key="ball_machine_sessions">Ball Machine</SelectItem>
-                <SelectItem key="pro_shop_discount">Pro Shop Discount</SelectItem>
+                <SelectItem key="ball_machine_sessions">
+                  Ball Machine
+                </SelectItem>
+                <SelectItem key="pro_shop_discount">
+                  Pro Shop Discount
+                </SelectItem>
                 <SelectItem key="membership_months">Membership</SelectItem>
                 <SelectItem key="private_lessons">Private Lessons</SelectItem>
                 <SelectItem key="recognition">Recognition</SelectItem>
@@ -297,9 +309,9 @@ export default function BenefitManagementPage() {
                 <TableColumn>ACTIONS</TableColumn>
               </TableHeader>
               <TableBody
-                items={paginatedBenefits}
-                isLoading={loading}
                 emptyContent="No pending benefits found"
+                isLoading={loading}
+                items={paginatedBenefits}
               >
                 {(benefit) => (
                   <TableRow key={benefit.allocation_id}>
@@ -313,7 +325,9 @@ export default function BenefitManagementPage() {
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">{benefit.benefit_name}</p>
-                      <p className="text-xs text-gray-500">{benefit.tier_name}</p>
+                      <p className="text-xs text-gray-500">
+                        {benefit.tier_name}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <Chip size="sm" variant="flat">
@@ -331,8 +345,8 @@ export default function BenefitManagementPage() {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        size="sm"
                         color={getStatusColor(benefit.fulfillment_status)}
+                        size="sm"
                         variant="flat"
                       >
                         {benefit.fulfillment_status}
@@ -373,13 +387,13 @@ export default function BenefitManagementPage() {
             {totalPages > 1 && (
               <div className="flex justify-center mt-4">
                 <Pagination
-                  total={totalPages}
-                  page={currentPage}
-                  onChange={setCurrentPage}
                   classNames={{
                     item: "bg-zinc-800 text-white",
                     cursor: "bg-[#B3FF00] text-black",
                   }}
+                  page={currentPage}
+                  total={totalPages}
+                  onChange={setCurrentPage}
                 />
               </div>
             )}
@@ -390,13 +404,13 @@ export default function BenefitManagementPage() {
       {/* Status Update Modal */}
       <Modal
         isOpen={showStatusModal}
+        size="lg"
         onClose={() => {
           setShowStatusModal(false);
           setSelectedBenefit(null);
           setNewStatus("");
           setStatusNotes("");
         }}
-        size="lg"
       >
         <ModalContent className="bg-zinc-900 text-white">
           <ModalHeader>Update Benefit Status</ModalHeader>
@@ -408,7 +422,9 @@ export default function BenefitManagementPage() {
                   <p className="font-semibold">
                     {selectedBenefit.first_name} {selectedBenefit.last_initial}.
                   </p>
-                  <p className="text-sm text-gray-500">{selectedBenefit.email}</p>
+                  <p className="text-sm text-gray-500">
+                    {selectedBenefit.email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">Benefit</p>
@@ -420,6 +436,7 @@ export default function BenefitManagementPage() {
                   selectedKeys={newStatus ? [newStatus] : []}
                   onSelectionChange={(keys) => {
                     const selected = Array.from(keys)[0];
+
                     setNewStatus(selected as string);
                   }}
                 >
@@ -448,8 +465,8 @@ export default function BenefitManagementPage() {
             </Button>
             <Button
               className="bg-[#B3FF00] text-black"
-              onPress={handleStatusUpdate}
               isDisabled={!newStatus}
+              onPress={handleStatusUpdate}
             >
               Update Status
             </Button>

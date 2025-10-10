@@ -1,5 +1,7 @@
 "use client";
 
+import type { PendingDUPRVerification } from "@/types/player";
+
 import { useState } from "react";
 import {
   Modal,
@@ -11,8 +13,6 @@ import {
 import { Button } from "@heroui/button";
 import { Textarea } from "@heroui/input";
 import { Icon } from "@iconify/react";
-
-import type { PendingDUPRVerification } from "@/types/player";
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -92,8 +92,8 @@ export default function VerificationModal({
               <p>
                 Please verify that this player&apos;s DUPR rating matches their
                 official DUPR app profile. You may request a screenshot or check
-                their profile directly if they&apos;ve shared their DUPR
-                profile link.
+                their profile directly if they&apos;ve shared their DUPR profile
+                link.
               </p>
             </div>
           </div>

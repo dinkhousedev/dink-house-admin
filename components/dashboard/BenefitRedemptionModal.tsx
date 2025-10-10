@@ -5,7 +5,13 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Textarea } from "@heroui/input";
 import { Checkbox } from "@heroui/checkbox";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Icon } from "@iconify/react";
 
 interface Benefit {
@@ -45,18 +51,22 @@ export default function BenefitRedemptionModal({
     if (!benefit) return;
 
     const quantity = parseInt(quantityUsed);
+
     if (isNaN(quantity) || quantity < 1) {
       setError("Please enter a valid quantity");
+
       return;
     }
 
     if (benefit.remaining !== null && quantity > benefit.remaining) {
       setError(`Only ${benefit.remaining} units remaining`);
+
       return;
     }
 
     if (!usedFor.trim()) {
       setError("Please describe what the benefit was used for");
+
       return;
     }
 
@@ -110,11 +120,15 @@ export default function BenefitRedemptionModal({
   if (!benefit) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="lg">
+    <Modal isOpen={isOpen} size="lg" onClose={handleClose}>
       <ModalContent className="bg-zinc-900 text-white">
         <ModalHeader className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <Icon icon="solar:check-circle-bold" className="text-[#B3FF00]" width={24} />
+            <Icon
+              className="text-[#B3FF00]"
+              icon="solar:check-circle-bold"
+              width={24}
+            />
             <span>Redeem Benefit</span>
           </div>
         </ModalHeader>
@@ -140,7 +154,8 @@ export default function BenefitRedemptionModal({
               )}
               {benefit.valid_until && (
                 <p className="text-sm text-gray-500">
-                  Valid until: {new Date(benefit.valid_until).toLocaleDateString()}
+                  Valid until:{" "}
+                  {new Date(benefit.valid_until).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -154,60 +169,60 @@ export default function BenefitRedemptionModal({
 
             {/* Quantity Input */}
             <Input
-              label="Quantity Used"
-              type="number"
-              min="1"
-              max={benefit.remaining ?? undefined}
-              value={quantityUsed}
-              onValueChange={setQuantityUsed}
+              isRequired
               description={
                 benefit.remaining !== null
                   ? `Maximum: ${benefit.remaining}`
                   : "Unlimited usage"
               }
-              isRequired
+              label="Quantity Used"
+              max={benefit.remaining ?? undefined}
+              min="1"
+              type="number"
+              value={quantityUsed}
+              onValueChange={setQuantityUsed}
             />
 
             {/* Used For Input */}
             <Input
+              isRequired
+              description="What was this benefit used for?"
               label="Used For"
               placeholder="e.g., Court 3 reservation, Ball machine session"
               value={usedFor}
               onValueChange={setUsedFor}
-              description="What was this benefit used for?"
-              isRequired
             />
 
             {/* Notes */}
             <Textarea
               label="Additional Notes"
+              minRows={2}
               placeholder="Any additional details about this redemption..."
               value={notes}
               onValueChange={setNotes}
-              minRows={2}
             />
 
             {/* Staff Verification */}
             <Checkbox
-              isSelected={staffVerified}
-              onValueChange={setStaffVerified}
               classNames={{
                 label: "text-sm",
               }}
+              isSelected={staffVerified}
+              onValueChange={setStaffVerified}
             >
               Staff verified - I confirm this benefit was redeemed
             </Checkbox>
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="flat" onPress={handleClose} isDisabled={loading}>
+          <Button isDisabled={loading} variant="flat" onPress={handleClose}>
             Cancel
           </Button>
           <Button
             className="bg-[#B3FF00] text-black"
-            onPress={handleSubmit}
-            isLoading={loading}
             isDisabled={loading}
+            isLoading={loading}
+            onPress={handleSubmit}
           >
             {loading ? "Processing..." : "Redeem Benefit"}
           </Button>

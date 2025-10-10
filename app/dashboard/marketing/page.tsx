@@ -110,7 +110,13 @@ export default function MarketingPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Email", "First Name", "Last Name", "Created At", "Status"];
+    const headers = [
+      "Email",
+      "First Name",
+      "Last Name",
+      "Created At",
+      "Status",
+    ];
     const csvData = subscribers.map((sub) => [
       sub.email,
       sub.first_name || "",
@@ -259,10 +265,7 @@ export default function MarketingPage() {
       </div>
 
       {/* Subscribers Table */}
-      <Card
-        className="border border-dink-gray/80 bg-[#0C0C0C]/90"
-        radius="lg"
-      >
+      <Card className="border border-dink-gray/80 bg-[#0C0C0C]/90" radius="lg">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-athletic text-xs text-default-500">
@@ -293,9 +296,7 @@ export default function MarketingPage() {
               className="min-w-[140px]"
               color="primary"
               radius="lg"
-              startContent={
-                <Icon icon="solar:download-linear" width={18} />
-              }
+              startContent={<Icon icon="solar:download-linear" width={18} />}
               variant="flat"
               onPress={exportToCSV}
             >
@@ -305,13 +306,13 @@ export default function MarketingPage() {
         </CardHeader>
         <CardBody>
           <Table
+            isStriped
             aria-label="Subscribers table"
             classNames={{
               wrapper: "bg-transparent shadow-none",
               th: "bg-[#141414] text-default-500 text-xs uppercase tracking-wider",
               td: "text-sm",
             }}
-            isStriped
           >
             <TableHeader>
               <TableColumn>EMAIL</TableColumn>
@@ -357,11 +358,11 @@ export default function MarketingPage() {
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
               <Pagination
+                showControls
                 classNames={{
                   cursor: "bg-dink-gradient text-dink-black",
                 }}
                 page={currentPage}
-                showControls
                 total={totalPages}
                 onChange={setCurrentPage}
               />

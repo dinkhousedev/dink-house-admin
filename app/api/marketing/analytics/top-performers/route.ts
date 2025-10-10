@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching top performers:", error);
+
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
@@ -29,9 +30,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("API GET /marketing/analytics/top-performers error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

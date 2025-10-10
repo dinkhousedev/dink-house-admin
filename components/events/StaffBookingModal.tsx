@@ -21,11 +21,7 @@ import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Checkbox, CheckboxGroup } from "@heroui/checkbox";
 import { Card, CardBody } from "@heroui/card";
 import { Icon } from "@iconify/react";
-import {
-  parseDate,
-  parseTime,
-  toCalendarDateTime,
-} from "@internationalized/date";
+import { parseDate, parseTime } from "@internationalized/date";
 
 import {
   EventType,
@@ -34,7 +30,22 @@ import {
   CourtAvailabilityResponse,
   EventFormData,
 } from "@/types/events";
-import { checkCourtAvailability, createEvent } from "@/app/dashboard/session_booking/actions";
+import {
+  checkCourtAvailability,
+  createEvent,
+} from "@/app/dashboard/session_booking/actions";
+import { createClient } from "@/lib/supabase/client";
+import { notify } from "@/lib/notifications";
+
+interface Player {
+  id: string;
+  account_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  membership_level: string;
+}
 
 interface StaffBookingModalProps {
   isOpen: boolean;
@@ -42,18 +53,32 @@ interface StaffBookingModalProps {
   defaultDate?: Date | null;
   defaultTime?: string | null;
   defaultCourt?: string | null;
+  selectedPlayer?: Player | null;
   onSuccess?: () => void;
 }
 
 const eventTypes: { key: EventType; label: string; icon: string }[] = [
-  { key: "scramble", label: "Scramble", icon: "solar:game-linear" },
-  { key: "dupr", label: "DUPR", icon: "solar:chart-square-linear" },
+  { key: "event_scramble", label: "Scramble", icon: "solar:game-linear" },
+  {
+    key: "dupr_open_play",
+    label: "DUPR Open Play",
+    icon: "solar:chart-square-linear",
+  },
+  {
+    key: "dupr_tournament",
+    label: "DUPR Tournament",
+    icon: "solar:trophy-linear",
+  },
+  {
+    key: "non_dupr_tournament",
+    label: "Non-DUPR Tournament",
+    icon: "solar:trophy-linear",
+  },
   {
     key: "open_play",
     label: "Open Play",
     icon: "solar:users-group-rounded-outline",
   },
-  { key: "tournament", label: "Tournament", icon: "solar:trophy-linear" },
   { key: "league", label: "League", icon: "solar:cup-linear" },
   { key: "clinic", label: "Clinic", icon: "solar:education-linear" },
   { key: "private_lesson", label: "Private Lesson", icon: "solar:user-linear" },
@@ -91,10 +116,21 @@ export function StaffBookingModal({
   defaultDate,
   defaultTime,
   defaultCourt,
+  selectedPlayer,
   onSuccess,
 }: StaffBookingModalProps) {
+  // Supabase client
+  const supabase = createClient();
+
+  // Player selection (for court bookings)
+  const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(
+    selectedPlayer?.account_id || "",
+  );
+  const [paymentMethod, setPaymentMethod] = useState<string>("online");
+
   // Form state
-  const [eventType, setEventType] = useState<EventType>("scramble");
+  const [eventType, setEventType] = useState<EventType>("private_lesson");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(
@@ -144,12 +180,42 @@ export function StaffBookingModal({
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Fetch players if no player is pre-selected
+  useEffect(() => {
+    if (isOpen && !selectedPlayer) {
+      fetchPlayers();
+    }
+  }, [isOpen]);
+
+  // Update selected player ID when prop changes
+  useEffect(() => {
+    if (selectedPlayer) {
+      setSelectedPlayerId(selectedPlayer.account_id);
+    }
+  }, [selectedPlayer]);
+
   // Check court availability when date/time changes
   useEffect(() => {
     if (date && startTime && endTime) {
       checkAvailability();
     }
   }, [date, startTime, endTime]);
+
+  async function fetchPlayers() {
+    try {
+      const { data, error } = await supabase
+        .from("players")
+        .select(
+          "id, account_id, first_name, last_name, email, phone, membership_level",
+        )
+        .order("first_name");
+
+      if (error) throw error;
+      if (data) setAvailablePlayers(data as Player[]);
+    } catch (error) {
+      console.error("Error fetching players:", error);
+    }
+  }
 
   const checkAvailability = async () => {
     if (!date || !startTime || !endTime) return;
@@ -196,6 +262,13 @@ export function StaffBookingModal({
       return;
     }
 
+    // For court bookings (private_lesson), require player selection
+    if (eventType === "private_lesson" && !selectedPlayerId) {
+      notify.warning("Please select a player for the court booking");
+
+      return;
+    }
+
     setSubmitting(true);
     try {
       const startDateTime = new Date(
@@ -213,63 +286,145 @@ export function StaffBookingModal({
         endTime.minute,
       );
 
-      const formData: EventFormData = {
-        title:
-          title ||
-          `${eventType.replace("_", " ").toUpperCase()} - ${date.toString()}`,
-        description,
-        event_type: eventType,
-        start_time: startDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
-        check_in_time: checkInTime
-          ? new Date(
-              date.year,
-              date.month - 1,
-              date.day,
-              checkInTime.hour,
-              checkInTime.minute,
-            ).toISOString()
-          : undefined,
-        court_ids: selectedCourtIds,
-        max_capacity: maxCapacity,
-        min_capacity: minCapacity,
-        waitlist_capacity: waitlistCapacity,
-        skill_levels: selectedSkillLevels,
-        member_only: memberOnly,
-        price_member: priceMember,
-        price_guest: priceGuest,
-        equipment_provided: equipmentProvided,
-        special_instructions: specialInstructions,
-        staff_notes: staffNotes,
-        setup_requirements: {
-          equipment: selectedEquipment,
-          staffing: selectedStaffing,
-          other: otherSetupRequirements ? [otherSetupRequirements] : [],
-        },
-        registration_deadline: registrationDeadline
-          ? new Date(
-              registrationDeadline.year,
-              registrationDeadline.month - 1,
-              registrationDeadline.day,
-              registrationDeadline.hour || 23,
-              registrationDeadline.minute || 59,
-            ).toISOString()
-          : undefined,
-      };
-
-      const result = await createEvent(formData);
-
-      if (result.success) {
-        onSuccess?.();
-        onClose();
-        resetForm();
+      // If this is a court booking (private_lesson), create booking differently
+      if (eventType === "private_lesson") {
+        await createCourtBooking(startDateTime, endDateTime);
       } else {
-        console.error("Error creating event:", result.error);
+        // Regular event creation
+        const formData: EventFormData = {
+          title:
+            title ||
+            `${eventType.replace("_", " ").toUpperCase()} - ${date.toString()}`,
+          description,
+          event_type: eventType,
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          check_in_time: checkInTime
+            ? new Date(
+                date.year,
+                date.month - 1,
+                date.day,
+                checkInTime.hour,
+                checkInTime.minute,
+              ).toISOString()
+            : undefined,
+          court_ids: selectedCourtIds,
+          max_capacity: maxCapacity,
+          min_capacity: minCapacity,
+          waitlist_capacity: waitlistCapacity,
+          skill_levels: selectedSkillLevels,
+          member_only: memberOnly,
+          price_member: priceMember,
+          price_guest: priceGuest,
+          equipment_provided: equipmentProvided,
+          special_instructions: specialInstructions,
+          staff_notes: staffNotes,
+          setup_requirements: {
+            equipment: selectedEquipment,
+            staffing: selectedStaffing,
+            other: otherSetupRequirements ? [otherSetupRequirements] : [],
+          },
+          registration_deadline: registrationDeadline
+            ? new Date(
+                registrationDeadline.year,
+                registrationDeadline.month - 1,
+                registrationDeadline.day,
+                registrationDeadline.hour || 23,
+                registrationDeadline.minute || 59,
+              ).toISOString()
+            : undefined,
+        };
+
+        const result = await createEvent(formData);
+
+        if (result.success) {
+          onSuccess?.();
+          onClose();
+          resetForm();
+          notify.success("Event created successfully");
+        } else {
+          console.error("Error creating event:", result.error);
+          notify.error(`Failed to create event: ${result.error}`);
+        }
       }
     } catch (error) {
       console.error("Error submitting:", error);
+      notify.error("Failed to create booking. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const createCourtBooking = async (startDateTime: Date, endDateTime: Date) => {
+    try {
+      // Get current admin user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // Create event first
+      const playerName = selectedPlayer
+        ? `${selectedPlayer.first_name} ${selectedPlayer.last_name}`
+        : availablePlayers.find((p) => p.account_id === selectedPlayerId)
+            ?.first_name || "Guest";
+
+      const { data: event, error: eventError } = await supabase
+        .from("events")
+        .insert({
+          title: title || `Court Booking - ${playerName}`,
+          event_type: "private_lesson",
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          max_capacity: 4,
+          price_member: priceMember,
+          is_published: false,
+        })
+        .select()
+        .single();
+
+      if (eventError) throw eventError;
+
+      // Link courts to event
+      const courtLinks = selectedCourtIds.map((courtId, index) => ({
+        event_id: event.id,
+        court_id: courtId,
+        is_primary: index === 0,
+      }));
+
+      await supabase.from("event_courts").insert(courtLinks);
+
+      // Create booking via RPC
+      const { data: booking, error: bookingError } = await supabase.rpc(
+        "create_court_booking",
+        {
+          p_event_id: event.id,
+          p_player_id: selectedPlayerId,
+          p_amount: priceMember,
+          p_booked_by_staff: true,
+          p_staff_user_id: user?.id,
+          p_booking_source: "admin_dashboard",
+          p_notes: staffNotes || null,
+        },
+      );
+
+      if (bookingError) throw bookingError;
+
+      // If payment method is not online, mark as completed
+      if (paymentMethod !== "online") {
+        await supabase.rpc("update_booking_payment", {
+          p_booking_id: booking.id,
+          p_payment_status: "completed",
+          p_stripe_payment_intent_id: null,
+          p_stripe_session_id: null,
+        });
+      }
+
+      onSuccess?.();
+      onClose();
+      resetForm();
+    } catch (error) {
+      console.error("Error creating court booking:", error);
+      throw error;
     }
   };
 
@@ -365,6 +520,86 @@ export function StaffBookingModal({
               </div>
 
               <Divider className="bg-dink-gray/30" />
+
+              {/* Player Selection (for court bookings) */}
+              {eventType === "private_lesson" && (
+                <>
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-dink-white">
+                      Player Selection
+                    </h3>
+                    {selectedPlayer ? (
+                      <Card className="bg-dink-lime/10 border border-dink-lime">
+                        <CardBody className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold text-dink-white">
+                                {selectedPlayer.first_name}{" "}
+                                {selectedPlayer.last_name}
+                              </p>
+                              <p className="text-xs text-default-500">
+                                {selectedPlayer.email ||
+                                  selectedPlayer.phone ||
+                                  ""}
+                              </p>
+                            </div>
+                            <Chip color="primary" size="sm" variant="flat">
+                              {selectedPlayer.membership_level}
+                            </Chip>
+                          </div>
+                        </CardBody>
+                      </Card>
+                    ) : (
+                      <Select
+                        classNames={{
+                          trigger: "bg-[#151515] border border-dink-gray",
+                        }}
+                        label="Select Player/Guest"
+                        placeholder="Choose a player..."
+                        selectedKeys={
+                          selectedPlayerId ? [selectedPlayerId] : []
+                        }
+                        variant="bordered"
+                        onChange={(e) => setSelectedPlayerId(e.target.value)}
+                      >
+                        {availablePlayers.map((player) => (
+                          <SelectItem
+                            key={player.account_id}
+                            textValue={`${player.first_name} ${player.last_name}`}
+                          >
+                            <div className="flex flex-col">
+                              <span>
+                                {player.first_name} {player.last_name}
+                              </span>
+                              <span className="text-xs text-default-500">
+                                {player.email || player.phone} -{" "}
+                                {player.membership_level}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </Select>
+                    )}
+                    <Select
+                      classNames={{
+                        trigger: "bg-[#151515] border border-dink-gray",
+                      }}
+                      label="Payment Method"
+                      placeholder="Select payment method"
+                      selectedKeys={[paymentMethod]}
+                      variant="bordered"
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                    >
+                      <SelectItem key="online">Online (Stripe)</SelectItem>
+                      <SelectItem key="terminal">Card Terminal</SelectItem>
+                      <SelectItem key="cash">Cash</SelectItem>
+                      <SelectItem key="comp">Comp (Free)</SelectItem>
+                    </Select>
+                  </div>
+
+                  <Divider className="bg-dink-gray/30" />
+                </>
+              )}
 
               {/* Date & Time */}
               <div className="space-y-4">
@@ -540,9 +775,9 @@ export function StaffBookingModal({
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-default-500 mb-2 block">
+                  <div className="text-sm text-default-500 mb-2 block">
                     Skill Levels
-                  </label>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {skillLevelOptions.map((level) => (
                       <Chip

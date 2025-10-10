@@ -472,16 +472,18 @@ export default function Home() {
   );
 }
 
-type Metric = (typeof staticMetrics)[number] | {
-  key: string;
-  label: string;
-  value: string;
-  delta: string;
-  caption: string;
-  icon: string;
-  tone: "positive" | "neutral";
-  progress?: number;
-};
+type Metric =
+  | (typeof staticMetrics)[number]
+  | {
+      key: string;
+      label: string;
+      value: string;
+      delta: string;
+      caption: string;
+      icon: string;
+      tone: "positive" | "neutral";
+      progress?: number;
+    };
 
 function MetricCard({ metric }: { metric: Metric }) {
   const toneClass =

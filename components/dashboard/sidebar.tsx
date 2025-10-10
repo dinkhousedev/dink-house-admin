@@ -48,6 +48,18 @@ const navSections: NavSection[] = [
         icon: "solar:calendar-linear",
         href: "/dashboard/session_booking",
       },
+      {
+        key: "open-play",
+        label: "Open Play Playground",
+        icon: "solar:calendar-bold",
+        href: "/dashboard/open-play-playground",
+      },
+      {
+        key: "live-events",
+        label: "Live Events",
+        icon: "solar:qr-scan-bold",
+        href: "/admin/operations/live-events",
+      },
     ],
   },
   // {

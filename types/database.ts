@@ -1,3 +1,21 @@
+// Player types
+export interface Player {
+  id: string;
+  account_id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  skill_level?: string;
+  membership_level?: string;
+  membership_start_date?: string;
+  membership_end_date?: string;
+  dupr_id?: string;
+  dupr_rating?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type EmployeeRole =
   | "admin"
   | "coach"

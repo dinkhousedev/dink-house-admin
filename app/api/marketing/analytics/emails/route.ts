@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Error fetching email analytics:", error);
+
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
         acc.totalClicked += email.unique_clicks || 0;
         acc.totalBounced += email.bounced_count || 0;
         acc.totalFailed += email.failed_count || 0;
+
         return acc;
       },
       {
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
         totalClicked: 0,
         totalBounced: 0,
         totalFailed: 0,
-      }
+      },
     );
 
     // Calculate overall rates
@@ -81,9 +83,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("API GET /marketing/analytics/emails error:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

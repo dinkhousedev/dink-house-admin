@@ -91,7 +91,7 @@ export default function EmailCampaignsPage() {
   const [campaignOverview, setCampaignOverview] =
     useState<CampaignOverview | null>(null);
   const [emailAnalytics, setEmailAnalytics] = useState<EmailAnalytics | null>(
-    null
+    null,
   );
   const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
 
@@ -166,6 +166,7 @@ export default function EmailCampaignsPage() {
     try {
       const response = await fetch("/api/marketing/analytics/overview");
       const data = await response.json();
+
       if (data.success) {
         setCampaignOverview(data.data);
       }
@@ -178,6 +179,7 @@ export default function EmailCampaignsPage() {
     try {
       const response = await fetch("/api/marketing/analytics/emails");
       const data = await response.json();
+
       if (data.success) {
         setEmailAnalytics(data.data.aggregateStats);
       }
@@ -189,9 +191,10 @@ export default function EmailCampaignsPage() {
   const fetchTopPerformers = useCallback(async () => {
     try {
       const response = await fetch(
-        "/api/marketing/analytics/top-performers?limit=5"
+        "/api/marketing/analytics/top-performers?limit=5",
       );
       const data = await response.json();
+
       if (data.success) {
         setTopPerformers(data.data);
       }
@@ -261,15 +264,18 @@ export default function EmailCampaignsPage() {
     if (!selectedEmail) return;
 
     try {
-      const response = await fetch(`/api/marketing/emails/${selectedEmail.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject: editSubject,
-          html_content: editHtmlContent,
-          text_content: editTextContent,
-        }),
-      });
+      const response = await fetch(
+        `/api/marketing/emails/${selectedEmail.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: editSubject,
+            html_content: editHtmlContent,
+            text_content: editTextContent,
+          }),
+        },
+      );
 
       const data = await response.json();
 
@@ -295,9 +301,12 @@ export default function EmailCampaignsPage() {
     if (!selectedEmail) return;
 
     try {
-      const response = await fetch(`/api/marketing/emails/${selectedEmail.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/marketing/emails/${selectedEmail.id}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       const data = await response.json();
 
@@ -329,7 +338,7 @@ export default function EmailCampaignsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
-        }
+        },
       );
 
       const data = await response.json();
@@ -581,10 +590,7 @@ export default function EmailCampaignsPage() {
       )}
 
       {/* Emails Table */}
-      <Card
-        className="border border-dink-gray/80 bg-[#0C0C0C]/90"
-        radius="lg"
-      >
+      <Card className="border border-dink-gray/80 bg-[#0C0C0C]/90" radius="lg">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-athletic text-xs text-default-500">
@@ -621,33 +627,23 @@ export default function EmailCampaignsPage() {
               selectedKeys={[statusFilter]}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <SelectItem key="all">
-                All Status
-              </SelectItem>
-              <SelectItem key="draft">
-                Draft
-              </SelectItem>
-              <SelectItem key="sent">
-                Sent
-              </SelectItem>
-              <SelectItem key="sending">
-                Sending
-              </SelectItem>
-              <SelectItem key="failed">
-                Failed
-              </SelectItem>
+              <SelectItem key="all">All Status</SelectItem>
+              <SelectItem key="draft">Draft</SelectItem>
+              <SelectItem key="sent">Sent</SelectItem>
+              <SelectItem key="sending">Sending</SelectItem>
+              <SelectItem key="failed">Failed</SelectItem>
             </Select>
           </div>
         </CardHeader>
         <CardBody>
           <Table
+            isStriped
             aria-label="Email campaigns table"
             classNames={{
               wrapper: "bg-transparent shadow-none",
               th: "bg-[#141414] text-default-500 text-xs uppercase tracking-wider",
               td: "text-sm",
             }}
-            isStriped
           >
             <TableHeader>
               <TableColumn>SUBJECT</TableColumn>
@@ -746,11 +742,11 @@ export default function EmailCampaignsPage() {
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
               <Pagination
+                showControls
                 classNames={{
                   cursor: "bg-dink-gradient text-dink-black",
                 }}
                 page={currentPage}
-                showControls
                 total={totalPages}
                 onChange={setCurrentPage}
               />
@@ -764,11 +760,7 @@ export default function EmailCampaignsPage() {
           ======================================================================== */}
 
       {/* Generate Email Modal */}
-      <Modal
-        isOpen={isGenerateOpen}
-        size="2xl"
-        onClose={onGenerateClose}
-      >
+      <Modal isOpen={isGenerateOpen} size="2xl" onClose={onGenerateClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-2">
@@ -796,18 +788,10 @@ export default function EmailCampaignsPage() {
                 selectedKeys={[generationTone]}
                 onChange={(e) => setGenerationTone(e.target.value)}
               >
-                <SelectItem key="enthusiastic">
-                  Enthusiastic
-                </SelectItem>
-                <SelectItem key="professional">
-                  Professional
-                </SelectItem>
-                <SelectItem key="casual">
-                  Casual
-                </SelectItem>
-                <SelectItem key="motivational">
-                  Motivational
-                </SelectItem>
+                <SelectItem key="enthusiastic">Enthusiastic</SelectItem>
+                <SelectItem key="professional">Professional</SelectItem>
+                <SelectItem key="casual">Casual</SelectItem>
+                <SelectItem key="motivational">Motivational</SelectItem>
               </Select>
             </div>
           </ModalBody>
@@ -827,11 +811,7 @@ export default function EmailCampaignsPage() {
       </Modal>
 
       {/* Preview Modal */}
-      <Modal
-        isOpen={isPreviewOpen}
-        size="4xl"
-        onClose={onPreviewClose}
-      >
+      <Modal isOpen={isPreviewOpen} size="4xl" onClose={onPreviewClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-2">
@@ -873,11 +853,7 @@ export default function EmailCampaignsPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal
-        isOpen={isEditOpen}
-        size="4xl"
-        onClose={onEditClose}
-      >
+      <Modal isOpen={isEditOpen} size="4xl" onClose={onEditClose}>
         <ModalContent>
           <ModalHeader>
             <div className="flex items-center gap-2">
