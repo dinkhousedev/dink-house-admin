@@ -17,16 +17,8 @@ export async function getEvents(
     let query = supabase
       .schema("events")
       .from("events")
-      .select(
-        `
-        *,
-        event_courts (
-          court:courts (*)
-        )
-      `,
-      )
+      .select("*")
       .eq("is_cancelled", false)
-      .neq("event_type", "dupr_open_play") // Exclude open play - fetched separately from instances
       .order("start_time", { ascending: true });
 
     console.log("[getEvents] Fetching events with date range:", {
@@ -59,17 +51,32 @@ export async function getEvents(
     console.log("[getEvents] Fetched events count:", data?.length || 0);
 
     // Transform data to match frontend types
-    const events = data?.map((event: any) => ({
-      ...event,
-      courts:
-        event.event_courts?.map((ec: any) => ({
-          id: ec.court.id,
-          court_number: ec.court.court_number,
-          name: ec.court.name,
-          surface_type: ec.court.surface_type,
-          is_primary: ec.is_primary,
-        })) || [],
-    }));
+    // Extract courts from court_allocations JSONB field
+    const events = data?.map((event: any) => {
+      // Parse court_allocations if it's a string
+      let courtAllocations = event.court_allocations;
+
+      if (typeof courtAllocations === "string") {
+        try {
+          courtAllocations = JSON.parse(courtAllocations);
+        } catch (e) {
+          console.error("[getEvents] Failed to parse court_allocations:", e);
+          courtAllocations = [];
+        }
+      }
+
+      return {
+        ...event,
+        courts:
+          courtAllocations?.map((ca: any) => ({
+            id: ca.court_id,
+            court_number: ca.court_number,
+            name: ca.court_name || `Court ${ca.court_number}`,
+            surface_type: ca.surface_type,
+            is_primary: ca.is_primary || false,
+          })) || [],
+      };
+    });
 
     return { success: true, data: events };
   } catch (error) {
@@ -87,21 +94,7 @@ export async function getEvent(eventId: string) {
     const { data, error } = await supabase
       .schema("events")
       .from("events")
-      .select(
-        `
-        *,
-        event_courts (
-          court:courts (*),
-          is_primary
-        ),
-        event_registrations (
-          id,
-          player_name,
-          skill_level,
-          status
-        )
-      `,
-      )
+      .select("*")
       .eq("id", eventId)
       .single();
 
@@ -112,17 +105,50 @@ export async function getEvent(eventId: string) {
     }
 
     // Transform data
+    // Extract courts from court_allocations JSONB field
+    // Extract registrations from player_registrations JSONB field
+
+    // Parse court_allocations if it's a string
+    let courtAllocations = data.court_allocations;
+
+    if (typeof courtAllocations === "string") {
+      try {
+        courtAllocations = JSON.parse(courtAllocations);
+      } catch (e) {
+        console.error("[getEvent] Failed to parse court_allocations:", e);
+        courtAllocations = [];
+      }
+    }
+
+    // Parse player_registrations if it's a string
+    let playerRegistrations = data.player_registrations;
+
+    if (typeof playerRegistrations === "string") {
+      try {
+        playerRegistrations = JSON.parse(playerRegistrations);
+      } catch (e) {
+        console.error("[getEvent] Failed to parse player_registrations:", e);
+        playerRegistrations = [];
+      }
+    }
+
     const event = {
       ...data,
       courts:
-        data.event_courts?.map((ec: any) => ({
-          id: ec.court.id,
-          court_number: ec.court.court_number,
-          name: ec.court.name,
-          surface_type: ec.court.surface_type,
-          is_primary: ec.is_primary,
+        courtAllocations?.map((ca: any) => ({
+          id: ca.court_id,
+          court_number: ca.court_number,
+          name: ca.court_name || `Court ${ca.court_number}`,
+          surface_type: ca.surface_type,
+          is_primary: ca.is_primary || false,
         })) || [],
-      registrations: data.event_registrations || [],
+      registrations:
+        playerRegistrations?.map((pr: any) => ({
+          id: pr.user_id || pr.id,
+          player_name: `${pr.first_name || ""} ${pr.last_name || ""}`.trim(),
+          skill_level: pr.skill_level,
+          status: pr.status,
+        })) || [],
     };
 
     return { success: true, data: event };
@@ -138,7 +164,49 @@ export async function createEvent(formData: EventFormData) {
   const supabase = await createClient();
 
   try {
-    // Start a transaction by creating the event first
+    // Build court allocations JSONB array if courts are provided
+    let courtAllocations: any[] = [];
+
+    if (formData.court_ids && formData.court_ids.length > 0) {
+      // Deduplicate court IDs to prevent duplicates
+      const uniqueCourtIds = [...new Set(formData.court_ids)];
+
+      console.log("[createEvent] Court IDs received:", formData.court_ids);
+      console.log("[createEvent] Unique court IDs:", uniqueCourtIds);
+
+      // Fetch court details to build the JSONB structure
+      const { data: courtsData, error: courtsError } = await supabase
+        .schema("events")
+        .from("courts")
+        .select("id, court_number, name, surface_type")
+        .in("id", uniqueCourtIds);
+
+      if (courtsError) {
+        console.error("Error fetching courts:", courtsError);
+
+        return { success: false, error: courtsError.message };
+      }
+
+      // Build court allocations JSONB array
+      courtAllocations = uniqueCourtIds.map((courtId, index) => {
+        const court = courtsData?.find((c: any) => c.id === courtId);
+
+        return {
+          court_id: courtId,
+          court_number: court?.court_number || 0,
+          court_name: court?.name || `Court ${court?.court_number || "?"}`,
+          surface_type: court?.surface_type,
+          is_primary: index === 0,
+          skill_level_min: null,
+          skill_level_max: null,
+          skill_level_label: null,
+          is_mixed_level: false,
+          sort_order: index,
+        };
+      });
+    }
+
+    // Create the event with court_allocations JSONB
     const { data: eventData, error: eventError } = await supabase
       .schema("events")
       .from("events")
@@ -159,10 +227,14 @@ export async function createEvent(formData: EventFormData) {
         equipment_provided: formData.equipment_provided,
         special_instructions: formData.special_instructions,
         template_id: formData.template_id,
-        staff_notes: formData.staff_notes,
-        setup_requirements: formData.setup_requirements,
-        instructor_id: formData.instructor_id,
+        settings: {
+          staff_notes: formData.staff_notes,
+          setup_requirements: formData.setup_requirements,
+          instructor_id: formData.instructor_id,
+        },
         registration_deadline: formData.registration_deadline,
+        court_allocations: courtAllocations,
+        player_registrations: [],
       })
       .select()
       .single();
@@ -171,38 +243,6 @@ export async function createEvent(formData: EventFormData) {
       console.error("Error creating event:", eventError);
 
       return { success: false, error: eventError.message };
-    }
-
-    // Assign courts if provided
-    if (formData.court_ids && formData.court_ids.length > 0) {
-      // Deduplicate court IDs to prevent constraint violations
-      const uniqueCourtIds = [...new Set(formData.court_ids)];
-
-      console.log("[createEvent] Court IDs received:", formData.court_ids);
-      console.log("[createEvent] Unique court IDs:", uniqueCourtIds);
-
-      const courtAssignments = uniqueCourtIds.map((courtId, index) => ({
-        event_id: eventData.id,
-        court_id: courtId,
-        is_primary: index === 0,
-      }));
-
-      const { error: courtsError } = await supabase
-        .schema("events")
-        .from("event_courts")
-        .insert(courtAssignments);
-
-      if (courtsError) {
-        // Rollback by deleting the event
-        await supabase
-          .schema("events")
-          .from("events")
-          .delete()
-          .eq("id", eventData.id);
-        console.error("Error assigning courts:", courtsError);
-
-        return { success: false, error: courtsError.message };
-      }
     }
 
     revalidatePath("/session_booking");
@@ -223,26 +263,81 @@ export async function updateEvent(
   const supabase = await createClient();
 
   try {
+    // Build court allocations JSONB array if courts are provided for update
+    let courtAllocations: any[] | undefined = undefined;
+
+    if (updates.court_ids !== undefined) {
+      // Deduplicate court IDs to prevent duplicates
+      const uniqueCourtIds = [...new Set(updates.court_ids)];
+
+      console.log("[updateEvent] Court IDs received:", updates.court_ids);
+      console.log("[updateEvent] Unique court IDs:", uniqueCourtIds);
+
+      if (uniqueCourtIds.length > 0) {
+        // Fetch court details to build the JSONB structure
+        const { data: courtsData, error: courtsError } = await supabase
+          .schema("events")
+          .from("courts")
+          .select("id, court_number, name, surface_type")
+          .in("id", uniqueCourtIds);
+
+        if (courtsError) {
+          console.error("Error fetching courts:", courtsError);
+
+          return { success: false, error: courtsError.message };
+        }
+
+        // Build court allocations JSONB array
+        courtAllocations = uniqueCourtIds.map((courtId, index) => {
+          const court = courtsData?.find((c: any) => c.id === courtId);
+
+          return {
+            court_id: courtId,
+            court_number: court?.court_number || 0,
+            court_name: court?.name || `Court ${court?.court_number || "?"}`,
+            surface_type: court?.surface_type,
+            is_primary: index === 0,
+            skill_level_min: null,
+            skill_level_max: null,
+            skill_level_label: null,
+            is_mixed_level: false,
+            sort_order: index,
+          };
+        });
+      } else {
+        // Empty array means clear all court allocations
+        courtAllocations = [];
+      }
+    }
+
+    // Build update object
+    const updateData: any = {
+      title: updates.title,
+      description: updates.description,
+      event_type: updates.event_type,
+      start_time: updates.start_time, // Already in CST format from frontend
+      end_time: updates.end_time, // Already in CST format from frontend
+      max_capacity: updates.max_capacity,
+      min_capacity: updates.min_capacity,
+      skill_levels: updates.skill_levels,
+      member_only: updates.member_only,
+      price_member: updates.price_member,
+      price_guest: updates.price_guest,
+      equipment_provided: updates.equipment_provided,
+      special_instructions: updates.special_instructions,
+      updated_at: toCSTString(new Date()),
+    };
+
+    // Only include court_allocations if it was built
+    if (courtAllocations !== undefined) {
+      updateData.court_allocations = courtAllocations;
+    }
+
     // Update the event
     const { data: eventData, error: eventError } = await supabase
       .schema("events")
       .from("events")
-      .update({
-        title: updates.title,
-        description: updates.description,
-        event_type: updates.event_type,
-        start_time: updates.start_time, // Already in CST format from frontend
-        end_time: updates.end_time, // Already in CST format from frontend
-        max_capacity: updates.max_capacity,
-        min_capacity: updates.min_capacity,
-        skill_levels: updates.skill_levels,
-        member_only: updates.member_only,
-        price_member: updates.price_member,
-        price_guest: updates.price_guest,
-        equipment_provided: updates.equipment_provided,
-        special_instructions: updates.special_instructions,
-        updated_at: toCSTString(new Date()),
-      })
+      .update(updateData)
       .eq("id", eventId)
       .select()
       .single();
@@ -251,67 +346,6 @@ export async function updateEvent(
       console.error("Error updating event:", eventError);
 
       return { success: false, error: eventError.message };
-    }
-
-    // Update court assignments if provided
-    if (updates.court_ids) {
-      // Deduplicate court IDs to prevent constraint violations
-      const uniqueCourtIds = [...new Set(updates.court_ids)];
-
-      console.log("[updateEvent] Court IDs received:", updates.court_ids);
-      console.log("[updateEvent] Unique court IDs:", uniqueCourtIds);
-
-      // Delete existing assignments and wait for completion
-      const {
-        data: deleteData,
-        error: deleteError,
-        count,
-      } = await supabase
-        .schema("events")
-        .from("event_courts")
-        .delete()
-        .eq("event_id", eventId)
-        .select();
-
-      console.log("[updateEvent] Delete operation result:", {
-        deletedCount: deleteData?.length || 0,
-        count,
-        error: deleteError,
-      });
-
-      if (deleteError) {
-        console.error(
-          "Error deleting existing court assignments:",
-          deleteError,
-        );
-
-        return { success: false, error: deleteError.message };
-      }
-
-      // Insert new assignments only after delete completes
-      if (uniqueCourtIds.length > 0) {
-        const courtAssignments = uniqueCourtIds.map((courtId, index) => ({
-          event_id: eventId,
-          court_id: courtId,
-          is_primary: index === 0,
-        }));
-
-        console.log(
-          "[updateEvent] Court assignments to insert:",
-          courtAssignments,
-        );
-
-        const { error: courtsError } = await supabase
-          .schema("events")
-          .from("event_courts")
-          .insert(courtAssignments);
-
-        if (courtsError) {
-          console.error("Error updating courts:", courtsError);
-
-          return { success: false, error: courtsError.message };
-        }
-      }
     }
 
     revalidatePath("/session_booking");
@@ -390,6 +424,31 @@ export async function getCourts() {
   const supabase = await createClient();
 
   try {
+    // First check ALL courts to diagnose issues
+    const { data: allCourts, error: allError } = await supabase
+      .schema("events")
+      .from("courts")
+      .select("*")
+      .order("court_number");
+
+    console.log(
+      "[getCourts] Total courts in database:",
+      allCourts?.length || 0,
+    );
+    if (allCourts && allCourts.length > 0) {
+      const statusCounts = allCourts.reduce(
+        (acc, court) => {
+          acc[court.status || "null"] = (acc[court.status || "null"] || 0) + 1;
+
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      console.log("[getCourts] Court status breakdown:", statusCounts);
+    }
+
+    // Now fetch only available courts
     const { data, error } = await supabase
       .schema("events")
       .from("courts")
@@ -398,14 +457,21 @@ export async function getCourts() {
       .order("court_number");
 
     if (error) {
-      console.error("Error fetching courts:", error);
+      console.error("[getCourts] Error fetching available courts:", error);
 
       return { success: false, error: error.message };
     }
 
+    console.log("[getCourts] Available courts:", data?.length || 0);
+    if (data && data.length === 0 && allCourts && allCourts.length > 0) {
+      console.warn(
+        "[getCourts] WARNING: Courts exist but none have status='available'",
+      );
+    }
+
     return { success: true, data };
   } catch (error) {
-    console.error("Error in getCourts:", error);
+    console.error("[getCourts] Error in getCourts:", error);
 
     return { success: false, error: "Failed to fetch courts" };
   }
@@ -457,14 +523,7 @@ export async function checkCourtAvailability(
     let query = supabase
       .schema("events")
       .from("events")
-      .select(
-        `
-        *,
-        event_courts (
-          court:courts (*)
-        )
-      `,
-      )
+      .select("*")
       .eq("is_cancelled", false)
       .lte("start_time", toCSTString(endTime))
       .gte("end_time", toCSTString(startTime));
@@ -486,20 +545,46 @@ export async function checkCourtAvailability(
     const availability = courtsResult.data.map((court) => {
       const conflicts =
         conflictingEvents
-          ?.filter((event: any) =>
-            event.event_courts?.some((ec: any) => ec.court.id === court.id),
-          )
-          .map((event: any) => ({
-            ...event,
-            courts:
-              event.event_courts?.map((ec: any) => ({
-                id: ec.court.id,
-                court_number: ec.court.court_number,
-                name: ec.court.name,
-                surface_type: ec.court.surface_type,
-                is_primary: ec.is_primary,
-              })) || [],
-          })) || [];
+          ?.filter((event: any) => {
+            // Parse court_allocations if it's a string
+            let courtAllocations = event.court_allocations;
+
+            if (typeof courtAllocations === "string") {
+              try {
+                courtAllocations = JSON.parse(courtAllocations);
+              } catch (e) {
+                return false;
+              }
+            }
+
+            return courtAllocations?.some(
+              (ca: any) => ca.court_id === court.id,
+            );
+          })
+          .map((event: any) => {
+            // Parse court_allocations if it's a string
+            let courtAllocations = event.court_allocations;
+
+            if (typeof courtAllocations === "string") {
+              try {
+                courtAllocations = JSON.parse(courtAllocations);
+              } catch (e) {
+                courtAllocations = [];
+              }
+            }
+
+            return {
+              ...event,
+              courts:
+                courtAllocations?.map((ca: any) => ({
+                  id: ca.court_id,
+                  court_number: ca.court_number,
+                  name: ca.court_name || `Court ${ca.court_number}`,
+                  surface_type: ca.surface_type,
+                  is_primary: ca.is_primary || false,
+                })) || [],
+            };
+          }) || [];
 
       return {
         court,
@@ -680,12 +765,44 @@ export async function getOpenPlayInstances(
       };
     });
 
-    console.log(
-      "[getOpenPlayInstances] Loaded instances:",
-      instances?.length || 0,
+    // Deduplicate instances by unique combination of date + start_time + end_time
+    // This prevents duplicate entries in calendar views when multiple schedule blocks
+    // create instances for the same time slot
+    const deduplicatedInstances = instances?.reduce(
+      (acc: any[], instance: any) => {
+        const key = `${instance.instance_date}_${instance.start_time}_${instance.end_time}`;
+        const existingIndex = acc.findIndex(
+          (i) => `${i.instance_date}_${i.start_time}_${i.end_time}` === key,
+        );
+
+        if (existingIndex === -1) {
+          // New unique instance
+          acc.push(instance);
+        } else {
+          // Duplicate found - keep the one with more courts allocated
+          const existingCourts = acc[existingIndex].courts?.length || 0;
+          const newCourts = instance.courts?.length || 0;
+
+          if (newCourts > existingCourts) {
+            acc[existingIndex] = instance;
+          }
+        }
+
+        return acc;
+      },
+      [],
     );
 
-    return { success: true, data: instances || [] };
+    console.log(
+      "[getOpenPlayInstances] Raw instances from DB:",
+      instances?.length || 0,
+    );
+    console.log(
+      "[getOpenPlayInstances] Deduplicated instances:",
+      deduplicatedInstances?.length || 0,
+    );
+
+    return { success: true, data: deduplicatedInstances || [] };
   } catch (error) {
     console.error("Error in getOpenPlayInstances:", error);
 
@@ -1058,5 +1175,215 @@ export async function updateEventTime(
     console.error("Error in updateEventTime:", error);
 
     return { success: false, error: "Failed to update event time" };
+  }
+}
+
+// GET: Fetch court allocations for a specific date
+export async function getCourtAllocationsForDate(date: Date) {
+  const supabase = await createClient();
+
+  try {
+    // Format date as YYYY-MM-DD
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+
+    // Get day of week (0 = Sunday, 1 = Monday, etc.)
+    const dayOfWeek = date.getDay();
+
+    console.log("[getCourtAllocationsForDate] Fetching allocations for:", {
+      dateStr,
+      dayOfWeek,
+    });
+
+    // First, check ALL schedule blocks to see what exists
+    const { data: allBlocks } = await supabase
+      .schema("events")
+      .from("open_play_schedule_blocks")
+      .select("id, name, day_of_week, is_active, start_time, end_time");
+
+    console.log(
+      "[getCourtAllocationsForDate] ALL schedule blocks in DB:",
+      allBlocks?.map((b) => ({
+        name: b.name,
+        day: b.day_of_week,
+        active: b.is_active,
+        time: `${b.start_time}-${b.end_time}`,
+      })),
+    );
+
+    // Fetch all schedule blocks for this day of week with their court allocations
+    const { data, error } = await supabase
+      .schema("events")
+      .from("open_play_schedule_blocks")
+      .select(
+        `
+        id,
+        name,
+        description,
+        day_of_week,
+        start_time,
+        end_time,
+        session_type,
+        special_event_name,
+        dedicated_skill_label,
+        is_active,
+        court_allocations:open_play_court_allocations (
+          id,
+          court_id,
+          skill_level_min,
+          skill_level_max,
+          skill_level_label,
+          is_mixed_level,
+          sort_order,
+          court:courts (
+            id,
+            court_number,
+            name,
+            surface_type,
+            status
+          )
+        )
+      `,
+      )
+      .eq("day_of_week", dayOfWeek)
+      .eq("is_active", true)
+      .order("start_time");
+
+    if (error) {
+      console.error("Error fetching court allocations:", error);
+
+      return { success: false, error: error.message };
+    }
+
+    console.log(
+      "[getCourtAllocationsForDate] Found schedule blocks:",
+      data?.length || 0,
+    );
+
+    // Debug: Check what we got back
+    if (data && data.length > 0) {
+      console.log(
+        "[getCourtAllocationsForDate] First block allocations:",
+        data[0].court_allocations?.length || 0,
+      );
+      console.log(
+        "[getCourtAllocationsForDate] First block sample:",
+        JSON.stringify(data[0], null, 2).substring(0, 500),
+      );
+    }
+
+    // Get the schedule block IDs
+    const blockIds = data?.map((block: any) => block.id) || [];
+
+    console.log("[getCourtAllocationsForDate] Block IDs to query:", blockIds);
+
+    if (blockIds.length === 0) {
+      console.log(
+        "[getCourtAllocationsForDate] No blocks found for this day, returning empty",
+      );
+
+      return { success: true, data: [] };
+    }
+
+    // First, let's see what's actually in the allocations table
+    const { data: allAllocations } = await supabase
+      .schema("events")
+      .from("open_play_court_allocations")
+      .select("*")
+      .limit(10);
+
+    console.log(
+      "[getCourtAllocationsForDate] Sample of ALL allocations in DB:",
+      allAllocations?.map((a) => ({
+        block_id: a.schedule_block_id,
+        court_id: a.court_id,
+        skill: a.skill_level_label,
+      })),
+    );
+
+    // Directly query court allocations for these blocks
+    const { data: directAllocations, error: allocError } = await supabase
+      .schema("events")
+      .from("open_play_court_allocations")
+      .select("*")
+      .in("schedule_block_id", blockIds);
+
+    if (allocError) {
+      console.error(
+        "[getCourtAllocationsForDate] Error fetching direct allocations:",
+        allocError,
+      );
+    }
+
+    console.log(
+      "[getCourtAllocationsForDate] Direct allocations query result:",
+      directAllocations?.length || 0,
+    );
+    console.log(
+      "[getCourtAllocationsForDate] Direct allocations sample:",
+      directAllocations?.slice(0, 3),
+    );
+
+    // Now fetch the related courts and schedule blocks separately
+    const uniqueCourtIds = new Set(
+      directAllocations?.map((a: any) => a.court_id) || [],
+    );
+    const courtIds = Array.from(uniqueCourtIds);
+    const { data: courtsData } = await supabase
+      .schema("events")
+      .from("courts")
+      .select("*")
+      .in("id", courtIds);
+
+    console.log(
+      "[getCourtAllocationsForDate] Related courts fetched:",
+      courtsData?.length || 0,
+    );
+
+    // Create court lookup map
+    const courtMap = new Map(courtsData?.map((c: any) => [c.id, c]) || []);
+
+    // Create schedule block lookup map
+    const blockMap = new Map(data?.map((b: any) => [b.id, b]) || []);
+
+    // Transform to a more usable format using the lookup maps
+    const allocations =
+      directAllocations?.map((allocation: any) => {
+        const court = courtMap.get(allocation.court_id);
+        const block = blockMap.get(allocation.schedule_block_id);
+
+        return {
+          schedule_block_id: allocation.schedule_block_id,
+          schedule_block_name: block?.name,
+          start_time: block?.start_time,
+          end_time: block?.end_time,
+          session_type: block?.session_type,
+          court_id: allocation.court_id,
+          court_number: court?.court_number,
+          court_name: court?.name,
+          surface_type: court?.surface_type,
+          skill_level_min: allocation.skill_level_min,
+          skill_level_max: allocation.skill_level_max,
+          skill_level_label: allocation.skill_level_label,
+          is_mixed_level: allocation.is_mixed_level,
+          sort_order: allocation.sort_order,
+        };
+      }) || [];
+
+    console.log(
+      "[getCourtAllocationsForDate] Total allocations:",
+      allocations?.length || 0,
+    );
+
+    return { success: true, data: allocations || [] };
+  } catch (error) {
+    console.error("Error in getCourtAllocationsForDate:", error);
+
+    return {
+      success: false,
+      error: "Failed to fetch court allocations for date",
+    };
   }
 }

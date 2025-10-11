@@ -139,6 +139,12 @@ export interface Event {
   created_by?: string;
   created_at: string;
   updated_at: string;
+
+  // Open Play specific (when merged from open_play_instances)
+  is_open_play?: boolean;
+  schedule_block_id?: string;
+  instance_date?: string;
+  day_of_week?: number;
 }
 
 export interface EventCourt {

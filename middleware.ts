@@ -22,8 +22,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route),
   );
 
-  // API routes should not be redirected
-  if (pathname.startsWith("/api/")) {
+  // API routes and debug routes should not be redirected
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/dashboard/debug-")
+  ) {
     return NextResponse.next();
   }
 

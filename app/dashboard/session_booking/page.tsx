@@ -17,7 +17,7 @@ import { Divider } from "@heroui/divider";
 import { Icon } from "@iconify/react";
 import { parseDate, getLocalTimeZone } from "@internationalized/date";
 
-import { getEvents, getOpenPlayInstances } from "./actions";
+import { getEvents, updateEventTime } from "./actions";
 
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { WeekView } from "@/components/calendar/WeekView";
@@ -25,6 +25,7 @@ import { DayView } from "@/components/calendar/DayView";
 import { CourtTimeline } from "@/components/calendar/CourtTimeline";
 import { StaffBookingModal } from "@/components/events/StaffBookingModal";
 import { OpenPlayEditModal } from "@/components/events/OpenPlayEditModal";
+import { EventEditModal } from "@/components/events/EventEditModal";
 import { CalendarView, type CalendarViewOptions, Event } from "@/types/events";
 
 export default function SessionBookingPage() {
@@ -54,6 +55,10 @@ export default function SessionBookingPage() {
   const [isOpenPlayChoiceModalOpen, setIsOpenPlayChoiceModalOpen] =
     useState(false);
   const [pendingOpenPlayEvent, setPendingOpenPlayEvent] = useState<any>(null);
+
+  // Regular Event Edit Modal State
+  const [isEventEditOpen, setIsEventEditOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState<Event | null>(null);
 
   const handleViewChange = (view: CalendarView) => {
     setViewOptions((prev) => ({ ...prev, view }));
@@ -115,21 +120,24 @@ export default function SessionBookingPage() {
     setIsBookingModalOpen(true);
   };
 
+  const handleShowMore = (date: Date) => {
+    // Switch to day view for the selected date
+    setViewOptions({
+      view: "day",
+      date: date,
+    });
+  };
+
   const handleBookingSuccess = () => {
     // Refresh calendar data
     fetchEvents();
   };
 
   const handleEventClick = (event: any) => {
-    // Check if this is an open play event
-    if (event.event_type === "open_play" || event.is_open_play) {
-      // Show modal to ask user if they want to edit series or just this instance
-      setPendingOpenPlayEvent(event);
-      setIsOpenPlayChoiceModalOpen(true);
-    } else {
-      // Handle regular event click (could open event details modal)
-      console.log("Regular event clicked:", event);
-    }
+    // Handle regular event click - open edit modal
+    console.log("Event clicked:", event);
+    setEditEvent(event);
+    setIsEventEditOpen(true);
   };
 
   const handleEditOpenPlaySeries = () => {
@@ -174,6 +182,72 @@ export default function SessionBookingPage() {
     return days[dayOfWeek] || "Unknown";
   };
 
+  const handleEventDrop = async (
+    event: Event,
+    newDate: Date,
+    newTimeSlot: string,
+  ) => {
+    try {
+      // Parse the new time slot
+      const [hour, minute] = newTimeSlot.split(":").map(Number);
+
+      // Calculate event duration in milliseconds
+      const originalStart = new Date(event.start_time);
+      const originalEnd = new Date(event.end_time);
+      const durationMs = originalEnd.getTime() - originalStart.getTime();
+
+      // Create new start time with the dropped date and time slot
+      const newStartTime = new Date(newDate);
+
+      newStartTime.setHours(hour, minute, 0, 0);
+
+      // Calculate new end time by adding original duration
+      const newEndTime = new Date(newStartTime.getTime() + durationMs);
+
+      // Format as ISO strings for the API
+      const newStartISO = newStartTime.toISOString();
+      const newEndISO = newEndTime.toISOString();
+
+      // Optimistic update - immediately update the local state
+      setEvents((prevEvents) =>
+        prevEvents.map((e) =>
+          e.id === event.id
+            ? { ...e, start_time: newStartISO, end_time: newEndISO }
+            : e,
+        ),
+      );
+
+      // Call the server action to update the database
+      const result = await updateEventTime(
+        event.id,
+        newStartISO,
+        newEndISO,
+        false, // Regular events only
+      );
+
+      if (!result.success) {
+        // Revert optimistic update on error
+        setEvents((prevEvents) =>
+          prevEvents.map((e) =>
+            e.id === event.id
+              ? { ...e, start_time: event.start_time, end_time: event.end_time }
+              : e,
+          ),
+        );
+        console.error("Failed to update event time:", result.error);
+        alert(`Failed to reschedule event: ${result.error}`);
+      } else {
+        // Success - refresh to get the latest data
+        await fetchEvents();
+      }
+    } catch (error) {
+      console.error("Error in handleEventDrop:", error);
+      alert("An unexpected error occurred while rescheduling the event");
+      // Refresh to ensure consistency
+      await fetchEvents();
+    }
+  };
+
   // Fetch events when view or date changes
   useEffect(() => {
     fetchEvents();
@@ -193,36 +267,15 @@ export default function SessionBookingPage() {
       endOfMonth.setDate(0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      // Fetch both regular events and open play instances
-      const [eventsResult, openPlayResult] = await Promise.all([
-        getEvents(startOfMonth, endOfMonth),
-        getOpenPlayInstances(startOfMonth, endOfMonth),
-      ]);
+      // Fetch only regular events (not open play instances)
+      const eventsResult = await getEvents(startOfMonth, endOfMonth);
 
       const regularEvents =
         eventsResult.success && eventsResult.data ? eventsResult.data : [];
-      const openPlaySessions =
-        openPlayResult.success && openPlayResult.data
-          ? openPlayResult.data
-          : [];
 
-      // Merge both into a single array for display
-      const allEvents = [...regularEvents, ...openPlaySessions] as Event[];
+      console.log("[SessionBookingPage] Loaded events:", regularEvents.length);
 
-      console.log(
-        "[SessionBookingPage] Loaded regular events:",
-        regularEvents.length,
-      );
-      console.log(
-        "[SessionBookingPage] Loaded open play sessions:",
-        openPlaySessions.length,
-      );
-      console.log(
-        "[SessionBookingPage] Total calendar items:",
-        allEvents.length,
-      );
-
-      setEvents(allEvents);
+      setEvents(regularEvents);
     } catch (error) {
       console.error("[SessionBookingPage] Error fetching events:", error);
       setEvents([]);
@@ -270,9 +323,9 @@ export default function SessionBookingPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-2">
       {/* Main Calendar Area */}
-      <div>
+      <div className="w-full">
         <Card className="border border-dink-gray bg-black/40">
           <CardHeader className="flex flex-col gap-4 pb-4">
             {/* Calendar Navigation */}
@@ -370,13 +423,6 @@ export default function SessionBookingPage() {
                 <Chip className="bg-green-500" size="sm" variant="dot">
                   <span className="text-xs">Clinic</span>
                 </Chip>
-                <Chip
-                  className="bg-dink-lime/80 text-black font-semibold"
-                  size="sm"
-                  variant="dot"
-                >
-                  <span className="text-xs">Open Play Schedule</span>
-                </Chip>
               </div>
             </div>
           </CardHeader>
@@ -397,6 +443,7 @@ export default function SessionBookingPage() {
                     events={events}
                     onCellClick={handleQuickCreate}
                     onEventClick={handleEventClick}
+                    onShowMore={handleShowMore}
                   />
                 )}
                 {viewOptions.view === "week" && (
@@ -404,6 +451,7 @@ export default function SessionBookingPage() {
                     date={viewOptions.date}
                     events={events}
                     onEventClick={handleEventClick}
+                    onEventDrop={handleEventDrop}
                     onSlotClick={handleQuickCreate}
                   />
                 )}
@@ -412,6 +460,7 @@ export default function SessionBookingPage() {
                     date={viewOptions.date}
                     events={events}
                     onEventClick={handleEventClick}
+                    onEventDrop={handleEventDrop}
                     onSlotClick={handleQuickCreate}
                   />
                 )}
@@ -453,11 +502,26 @@ export default function SessionBookingPage() {
             setEditOpenPlayId(null);
             setEditOpenPlayInstanceDate(null);
           }}
-          onSuccess={() => {
-            fetchEvents();
+          onSuccess={async () => {
+            // Refresh calendar data and wait for it to complete
+            await fetchEvents();
           }}
         />
       )}
+
+      {/* Regular Event Edit Modal */}
+      <EventEditModal
+        event={editEvent}
+        isOpen={isEventEditOpen}
+        onClose={() => {
+          setIsEventEditOpen(false);
+          setEditEvent(null);
+        }}
+        onSuccess={async () => {
+          // Refresh calendar data and wait for it to complete
+          await fetchEvents();
+        }}
+      />
 
       {/* Open Play Choice Modal */}
       <Modal

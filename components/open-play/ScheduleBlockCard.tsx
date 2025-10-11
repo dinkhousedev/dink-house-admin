@@ -156,19 +156,20 @@ export function ScheduleBlockCard({
     return (
       <>
         <Card
-          isPressable
-          className={`border-2 transition-all ${
+          className={`border-2 transition-all cursor-pointer ${
             isSelected
               ? "border-dink-lime bg-dink-lime/10"
               : scheduleBlock.is_active
                 ? "border-dink-gray/50 bg-black/60 hover:border-dink-lime/50"
                 : "border-dink-gray/30 bg-black/30 opacity-50"
           }`}
-          onPress={() => onSelect(!isSelected)}
         >
           <CardBody className="p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
+              <div
+                className="flex-1 min-w-0"
+                onClick={() => onSelect(!isSelected)}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <Icon
                     className={sessionInfo.color}
@@ -195,7 +196,6 @@ export function ScheduleBlockCard({
                     className="bg-dink-gray/20"
                     size="sm"
                     variant="flat"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <Icon icon="solar:menu-dots-bold" width={16} />
                   </Button>
@@ -290,6 +290,7 @@ export function ScheduleBlockCard({
             }}
           />
         )}
+        {ConfirmDialogComponent}
       </>
     );
   }
@@ -298,19 +299,17 @@ export function ScheduleBlockCard({
   return (
     <>
       <Card
-        isPressable
-        className={`border-2 transition-all ${
+        className={`border-2 transition-all cursor-pointer ${
           isSelected
             ? "border-dink-lime bg-dink-lime/10"
             : scheduleBlock.is_active
               ? "border-dink-gray/50 bg-black/60 hover:border-dink-lime/50"
               : "border-dink-gray/30 bg-black/30 opacity-60"
         }`}
-        onPress={() => onSelect(!isSelected)}
       >
         <CardBody className="p-4">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
+            <div className="flex-1" onClick={() => onSelect(!isSelected)}>
               <div className="flex items-center gap-3 mb-2">
                 <Icon
                   className={sessionInfo.color}
@@ -391,7 +390,6 @@ export function ScheduleBlockCard({
                     className="bg-dink-gray/20"
                     size="sm"
                     variant="flat"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     <Icon icon="solar:menu-dots-bold" width={20} />
                   </Button>

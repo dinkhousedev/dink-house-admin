@@ -92,13 +92,17 @@ export function OpenPlayEditModal({
     setLoading(true);
     try {
       if (mode === "series") {
-        // Update the entire series
-        const result = await updateScheduleBlock(scheduleBlockId, formData);
+        // Update the entire series - force member price to 0 (members always play free)
+        const dataToSave = { ...formData, price_member: 0 };
+        const result = await updateScheduleBlock(scheduleBlockId, dataToSave);
 
         if (result.success) {
-          onSuccess?.();
-          onClose();
           notify.success("Schedule block updated successfully");
+          // Wait for data refresh before closing
+          if (onSuccess) {
+            await onSuccess();
+          }
+          onClose();
         } else {
           notify.error(`Error: ${result.error}`);
         }
@@ -113,9 +117,12 @@ export function OpenPlayEditModal({
           );
 
           if (result.success) {
-            onSuccess?.();
-            onClose();
             notify.success("Schedule instance cancelled successfully");
+            // Wait for data refresh before closing
+            if (onSuccess) {
+              await onSuccess();
+            }
+            onClose();
           } else {
             notify.error(`Error: ${result.error}`);
           }
@@ -134,9 +141,12 @@ export function OpenPlayEditModal({
           );
 
           if (result.success) {
-            onSuccess?.();
-            onClose();
             notify.success("Schedule instance updated successfully");
+            // Wait for data refresh before closing
+            if (onSuccess) {
+              await onSuccess();
+            }
+            onClose();
           } else {
             notify.error(`Error: ${result.error}`);
           }
@@ -166,9 +176,12 @@ export function OpenPlayEditModal({
       const result = await deleteScheduleBlock(scheduleBlockId);
 
       if (result.success) {
-        onSuccess?.();
-        onClose();
         notify.success("Schedule block deleted successfully");
+        // Wait for data refresh before closing
+        if (onSuccess) {
+          await onSuccess();
+        }
+        onClose();
       } else {
         notify.error(`Error: ${result.error}`);
       }
@@ -347,22 +360,24 @@ export function OpenPlayEditModal({
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
-                        <Input
-                          label="Member Price"
-                          labelPlacement="outside"
-                          startContent={
-                            <span className="text-default-400">$</span>
-                          }
-                          type="number"
-                          value={formData.price_member.toString()}
-                          variant="bordered"
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              price_member: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
+                        <div>
+                          <Input
+                            isDisabled
+                            description="Members always play free"
+                            label="Member Price"
+                            labelPlacement="outside"
+                            startContent={
+                              <span className="text-default-400">$</span>
+                            }
+                            type="number"
+                            value="0"
+                            variant="bordered"
+                          />
+                          <div className="mt-1 flex items-center gap-1 text-xs text-dink-lime">
+                            <Icon icon="solar:check-circle-bold" width={14} />
+                            <span>FREE for members</span>
+                          </div>
+                        </div>
                         <Input
                           label="Guest Price"
                           labelPlacement="outside"

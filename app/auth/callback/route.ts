@@ -48,11 +48,12 @@ export async function GET(request: Request) {
       .single();
 
     if (allowedError || !allowedEmail || !allowedEmail.is_active) {
-      console.error("User not authorized:", allowedError || "Not in allowed_emails");
-
-      return NextResponse.redirect(
-        `${origin}/auth/login?error=not_authorized`,
+      console.error(
+        "User not authorized:",
+        allowedError || "Not in allowed_emails",
       );
+
+      return NextResponse.redirect(`${origin}/auth/login?error=not_authorized`);
     }
 
     const userRole = allowedEmail.role || "viewer";

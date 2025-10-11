@@ -36,6 +36,7 @@ import {
 } from "@/app/dashboard/session_booking/actions";
 import { notify } from "@/lib/notifications";
 import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { internationalizedToCST } from "@/lib/time-utils";
 
 interface EventEditModalProps {
   isOpen: boolean;
@@ -160,21 +161,40 @@ export function EventEditModal({
     setTitle(eventData.title);
     setDescription(eventData.description || "");
 
-    // Parse dates and times
+    // Parse dates and times in CST timezone
     const startDate = new Date(eventData.start_time);
     const endDate = new Date(eventData.end_time);
 
-    setDate(parseDate(startDate.toISOString().split("T")[0]));
-    setStartTime(
-      parseTime(
-        `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")}`,
-      ),
-    );
-    setEndTime(
-      parseTime(
-        `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`,
-      ),
-    );
+    // Use toLocaleString with CST timezone to extract components
+    const startCSTStr = startDate.toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const endCSTStr = endDate.toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    // Parse date: format is "MM/DD/YYYY, HH:mm"
+    const [datePartStart, timePartStart] = startCSTStr.split(", ");
+    const [, timePartEnd] = endCSTStr.split(", ");
+    const [monthStart, dayStart, yearStart] = datePartStart.split("/");
+    const [hourStart, minuteStart] = timePartStart.split(":");
+    const [hourEnd, minuteEnd] = timePartEnd.split(":");
+
+    setDate(parseDate(`${yearStart}-${monthStart}-${dayStart}`));
+    setStartTime(parseTime(`${hourStart}:${minuteStart}`));
+    setEndTime(parseTime(`${hourEnd}:${minuteEnd}`));
 
     // Set court IDs
     if (eventData.courts && eventData.courts.length > 0) {
@@ -207,20 +227,9 @@ export function EventEditModal({
 
     setCheckingAvailability(true);
     try {
-      const startDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        startTime.hour,
-        startTime.minute,
-      );
-      const endDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        endTime.hour,
-        endTime.minute,
-      );
+      // Convert @internationalized/date values to CST Date objects
+      const startDateTime = internationalizedToCST(date, startTime);
+      const endDateTime = internationalizedToCST(date, endTime);
 
       const result = await checkCourtAvailability(
         startDateTime,
@@ -229,6 +238,8 @@ export function EventEditModal({
       );
 
       if (result.success && result.data) {
+        console.log("[EventEditModal] Court availability data:", result.data);
+        console.log("[EventEditModal] Sample court:", result.data[0]?.court);
         setCourtAvailability(result.data);
       }
     } catch (error) {
@@ -253,27 +264,22 @@ export function EventEditModal({
 
     setSubmitting(true);
     try {
-      const startDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        startTime.hour,
-        startTime.minute,
-      );
-      const endDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        endTime.hour,
-        endTime.minute,
-      );
+      // Build ISO strings directly from form values (already CST)
+      // No timezone conversion needed - form inputs are already CST values
+      const year = date.year;
+      const month = String(date.month).padStart(2, "0");
+      const day = String(date.day).padStart(2, "0");
+      const startHour = String(startTime.hour).padStart(2, "0");
+      const startMinute = String(startTime.minute).padStart(2, "0");
+      const endHour = String(endTime.hour).padStart(2, "0");
+      const endMinute = String(endTime.minute).padStart(2, "0");
 
       const updates = {
         title,
         description,
         event_type: eventType,
-        start_time: startDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
+        start_time: `${year}-${month}-${day}T${startHour}:${startMinute}:00`,
+        end_time: `${year}-${month}-${day}T${endHour}:${endMinute}:00`,
         court_ids: selectedCourtIds,
         max_capacity: maxCapacity,
         min_capacity: minCapacity,
@@ -293,9 +299,12 @@ export function EventEditModal({
       const result = await updateEvent(event.id, updates);
 
       if (result.success) {
-        onSuccess?.();
-        onClose();
         notify.success("Event updated successfully");
+        // Wait for data refresh before closing
+        if (onSuccess) {
+          await onSuccess();
+        }
+        onClose();
       } else {
         console.error("Error updating event:", result.error);
         notify.error("Failed to update event. Please try again.");
@@ -325,9 +334,12 @@ export function EventEditModal({
       const result = await deleteEvent(event.id);
 
       if (result.success) {
-        onSuccess?.();
-        onClose();
         notify.success("Event deleted successfully");
+        // Wait for data refresh before closing
+        if (onSuccess) {
+          await onSuccess();
+        }
+        onClose();
       } else {
         console.error("Error deleting event:", result.error);
         notify.error("Failed to delete event. Please try again.");
@@ -340,12 +352,16 @@ export function EventEditModal({
     }
   };
 
-  const indoorCourts = courtAvailability.filter(
-    (ca) => ca.court.surface_type === "indoor",
-  );
-  const outdoorCourts = courtAvailability.filter(
-    (ca) => ca.court.surface_type !== "indoor",
-  );
+  const indoorCourts = courtAvailability
+    .filter((ca) => ca.court.environment === "indoor")
+    .sort((a, b) => a.court.court_number - b.court.court_number);
+  const outdoorCourts = courtAvailability
+    .filter((ca) => ca.court.environment === "outdoor")
+    .sort((a, b) => a.court.court_number - b.court.court_number);
+
+  console.log("[EventEditModal] Total courts:", courtAvailability.length);
+  console.log("[EventEditModal] Indoor courts:", indoorCourts.length);
+  console.log("[EventEditModal] Outdoor courts:", outdoorCourts.length);
 
   return (
     <Modal
@@ -465,6 +481,36 @@ export function EventEditModal({
                     </span>
                   )}
                 </div>
+
+                {/* No Courts Warning */}
+                {!checkingAvailability &&
+                  courtAvailability.length === 0 &&
+                  date &&
+                  startTime &&
+                  endTime && (
+                    <Card className="bg-yellow-500/10 border border-yellow-500/30">
+                      <CardBody className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Icon
+                            className="text-yellow-500 mt-0.5"
+                            icon="solar:danger-triangle-linear"
+                            width={24}
+                          />
+                          <div>
+                            <h4 className="text-sm font-semibold text-yellow-500 mb-1">
+                              No Courts Available
+                            </h4>
+                            <p className="text-xs text-dink-white/70">
+                              No courts were found in the system or none have
+                              &apos;available&apos; status. Please contact an
+                              administrator to set up courts before creating or
+                              editing events.
+                            </p>
+                          </div>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  )}
 
                 {/* Indoor Courts */}
                 {indoorCourts.length > 0 && (
@@ -732,7 +778,13 @@ export function EventEditModal({
           </Button>
           <Button
             className="bg-dink-lime text-black font-semibold"
-            isDisabled={!date || !startTime || !endTime}
+            isDisabled={
+              !date ||
+              !startTime ||
+              !endTime ||
+              courtAvailability.length === 0 ||
+              selectedCourtIds.length === 0
+            }
             isLoading={submitting}
             startContent={<Icon icon="solar:check-circle-bold" width={20} />}
             onPress={handleSubmit}

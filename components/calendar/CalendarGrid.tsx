@@ -49,18 +49,34 @@ export function CalendarGrid({
   }, [date]);
 
   const getEventsForDay = (day: Date) => {
-    return events.filter((event) => {
+    // First filter events for this day
+    const dayEvents = events.filter((event) => {
       // Parse event time and convert to local timezone for comparison
       const eventDate = new Date(event.start_time);
 
       // Get local date components (browser's timezone)
-      const eventLocalDate = new Date(eventDate.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+      const eventLocalDate = new Date(
+        eventDate.toLocaleString("en-US", { timeZone: "America/Chicago" }),
+      );
 
       return (
         eventLocalDate.getDate() === day.getDate() &&
         eventLocalDate.getMonth() === day.getMonth() &&
         eventLocalDate.getFullYear() === day.getFullYear()
       );
+    });
+
+    // Deduplicate by unique event ID to prevent duplicate display
+    // This is a defensive measure in case backend sends duplicates
+    const seen = new Set<string>();
+
+    return dayEvents.filter((event) => {
+      if (seen.has(event.id)) {
+        return false;
+      }
+      seen.add(event.id);
+
+      return true;
     });
   };
 
@@ -145,17 +161,23 @@ export function CalendarGrid({
                         <div className="p-2">
                           <p className="font-semibold">{event.title}</p>
                           <p className="text-xs">
-                            {new Date(event.start_time).toLocaleTimeString('en-US', {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "America/Chicago",
-                            })}
+                            {new Date(event.start_time).toLocaleTimeString(
+                              "en-US",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "America/Chicago",
+                              },
+                            )}
                             {" - "}
-                            {new Date(event.end_time).toLocaleTimeString('en-US', {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "America/Chicago",
-                            })}
+                            {new Date(event.end_time).toLocaleTimeString(
+                              "en-US",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "America/Chicago",
+                              },
+                            )}
                           </p>
                           <p className="text-xs">
                             {event.current_registrations}/{event.max_capacity}{" "}

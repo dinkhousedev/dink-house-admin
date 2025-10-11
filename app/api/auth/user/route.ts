@@ -117,7 +117,7 @@ export async function GET() {
 
     // Get user role from allowed_emails table
     console.log("Looking up user email:", authUser.email);
-    
+
     const { data: allowedEmail, error: profileError } = await supabaseAdmin
       .from("allowed_emails")
       .select("email, first_name, last_name, role, is_active")
@@ -130,7 +130,11 @@ export async function GET() {
       console.error("Database error getting user profile:", profileError);
 
       return NextResponse.json(
-        { error: "Database error", success: false, details: profileError.message },
+        {
+          error: "Database error",
+          success: false,
+          details: profileError.message,
+        },
         { status: 500 },
       );
     }

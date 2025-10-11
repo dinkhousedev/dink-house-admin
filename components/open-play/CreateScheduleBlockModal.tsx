@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Modal,
   ModalContent,
@@ -15,7 +15,10 @@ import { Select, SelectItem } from "@heroui/select";
 import { Divider } from "@heroui/divider";
 import { Icon } from "@iconify/react";
 
-import { createScheduleBlock } from "@/app/dashboard/open-play-playground/actions";
+import {
+  createScheduleBlock,
+  checkScheduleConflicts,
+} from "@/app/dashboard/open-play-playground/actions";
 import { notify } from "@/lib/notifications";
 
 interface CreateScheduleBlockModalProps {
@@ -32,6 +35,8 @@ export function CreateScheduleBlockModal({
   courts,
 }: CreateScheduleBlockModalProps) {
   const [loading, setLoading] = useState(false);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
+  const [conflicts, setConflicts] = useState<any[] | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -54,72 +59,72 @@ export function CreateScheduleBlockModal({
 
   const sessionNamePresets = [
     {
-      value: "Morning Open Play - Beginner (DUPR 2.5-3.0)",
-      label: "Morning Open Play - Beginner (DUPR 2.5-3.0)",
+      value: "Morning Open Play - Beginner (DUPR 2.0-3.0)",
+      label: "Morning Open Play - Beginner (DUPR 2.0-3.0)",
     },
     {
-      value: "Morning Open Play - Intermediate (DUPR 3.0-3.8)",
-      label: "Morning Open Play - Intermediate (DUPR 3.0-3.8)",
+      value: "Morning Open Play - Intermediate (DUPR 3.0-4.5)",
+      label: "Morning Open Play - Intermediate (DUPR 3.0-4.5)",
     },
     {
-      value: "Morning Open Play - Advanced (DUPR 4.0+)",
-      label: "Morning Open Play - Advanced (DUPR 4.0+)",
+      value: "Morning Open Play - Advanced (DUPR 4.5+)",
+      label: "Morning Open Play - Advanced (DUPR 4.5+)",
     },
     {
-      value: "Afternoon Open Play - Beginner (DUPR 2.5-3.0)",
-      label: "Afternoon Open Play - Beginner (DUPR 2.5-3.0)",
+      value: "Afternoon Open Play - Beginner (DUPR 2.0-3.0)",
+      label: "Afternoon Open Play - Beginner (DUPR 2.0-3.0)",
     },
     {
-      value: "Afternoon Open Play - Intermediate (DUPR 3.0-3.8)",
-      label: "Afternoon Open Play - Intermediate (DUPR 3.0-3.8)",
+      value: "Afternoon Open Play - Intermediate (DUPR 3.0-4.5)",
+      label: "Afternoon Open Play - Intermediate (DUPR 3.0-4.5)",
     },
     {
-      value: "Afternoon Open Play - Advanced (DUPR 4.0+)",
-      label: "Afternoon Open Play - Advanced (DUPR 4.0+)",
+      value: "Afternoon Open Play - Advanced (DUPR 4.5+)",
+      label: "Afternoon Open Play - Advanced (DUPR 4.5+)",
     },
     {
-      value: "Evening Open Play - Beginner (DUPR 2.5-3.0)",
-      label: "Evening Open Play - Beginner (DUPR 2.5-3.0)",
+      value: "Evening Open Play - Beginner (DUPR 2.0-3.0)",
+      label: "Evening Open Play - Beginner (DUPR 2.0-3.0)",
     },
     {
-      value: "Evening Open Play - Intermediate (DUPR 3.0-3.8)",
-      label: "Evening Open Play - Intermediate (DUPR 3.0-3.8)",
+      value: "Evening Open Play - Intermediate (DUPR 3.0-4.5)",
+      label: "Evening Open Play - Intermediate (DUPR 3.0-4.5)",
     },
     {
-      value: "Evening Open Play - Advanced (DUPR 4.0+)",
-      label: "Evening Open Play - Advanced (DUPR 4.0+)",
+      value: "Evening Open Play - Advanced (DUPR 4.5+)",
+      label: "Evening Open Play - Advanced (DUPR 4.5+)",
     },
     {
-      value: "Mixed Levels Play (DUPR 2.5-4.0+)",
-      label: "Mixed Levels Play (DUPR 2.5-4.0+)",
+      value: "Mixed Levels Play (DUPR 2.0-5.0)",
+      label: "Mixed Levels Play (DUPR 2.0-5.0)",
     },
     {
-      value: "Ladies Night - Intermediate (DUPR 3.0-3.8)",
-      label: "Ladies Night - Intermediate (DUPR 3.0-3.8)",
+      value: "Ladies Night - Intermediate (DUPR 3.0-4.5)",
+      label: "Ladies Night - Intermediate (DUPR 3.0-4.5)",
     },
     {
-      value: "Ladies Night - Advanced (DUPR 4.0+)",
-      label: "Ladies Night - Advanced (DUPR 4.0+)",
+      value: "Ladies Night - Advanced (DUPR 4.5+)",
+      label: "Ladies Night - Advanced (DUPR 4.5+)",
     },
     {
-      value: "Men's Night - Intermediate (DUPR 3.0-3.8)",
-      label: "Men's Night - Intermediate (DUPR 3.0-3.8)",
+      value: "Men's Night - Intermediate (DUPR 3.0-4.5)",
+      label: "Men's Night - Intermediate (DUPR 3.0-4.5)",
     },
     {
-      value: "Men's Night - Advanced (DUPR 4.0+)",
-      label: "Men's Night - Advanced (DUPR 4.0+)",
+      value: "Men's Night - Advanced (DUPR 4.5+)",
+      label: "Men's Night - Advanced (DUPR 4.5+)",
     },
     {
-      value: "Beginner Friendly Session (DUPR 2.5-3.0)",
-      label: "Beginner Friendly Session (DUPR 2.5-3.0)",
+      value: "Beginner Friendly Session (DUPR 2.0-3.0)",
+      label: "Beginner Friendly Session (DUPR 2.0-3.0)",
     },
     {
-      value: "Advanced Players Session (DUPR 4.0+)",
-      label: "Advanced Players Session (DUPR 4.0+)",
+      value: "Advanced Players Session (DUPR 4.5+)",
+      label: "Advanced Players Session (DUPR 4.5+)",
     },
     {
-      value: "Weekend Warriors - Mixed (DUPR 2.5-4.0+)",
-      label: "Weekend Warriors - Mixed (DUPR 2.5-4.0+)",
+      value: "Weekend Warriors - Mixed (DUPR 2.0-5.0)",
+      label: "Weekend Warriors - Mixed (DUPR 2.0-5.0)",
     },
     {
       value: "Social Play Session - All Levels",
@@ -193,11 +198,23 @@ export function CreateScheduleBlockModal({
     return null;
   };
 
+  // Detect time of day from session name and return appropriate start time
+  const detectTimeOfDay = (sessionName: string): string | null => {
+    const lowerName = sessionName.toLowerCase();
+
+    if (lowerName.includes("morning")) return "08:00"; // 8 AM
+    if (lowerName.includes("afternoon")) return "12:00"; // 12 PM
+    if (lowerName.includes("evening")) return "17:00"; // 5 PM
+
+    return null;
+  };
+
   // Detect session type and populate all related fields
   const detectSessionConfig = (sessionName: string) => {
     const lowerName = sessionName.toLowerCase();
     const duprRating = parseDUPRRating(sessionName);
     const skillLevel = detectSkillLevel(sessionName);
+    const timeOfDay = detectTimeOfDay(sessionName);
 
     // Default values
     let sessionType = "divided_by_skill";
@@ -205,6 +222,16 @@ export function CreateScheduleBlockModal({
     let dedicatedSkillMax: number | undefined = undefined;
     let dedicatedSkillLabel: string | undefined = undefined;
     let specialEventName: string | undefined = undefined;
+    let startTime = timeOfDay || "09:00"; // Use detected time or default to 9 AM
+    let endTime = "11:00";
+
+    // Calculate end time (2 hours after start)
+    if (timeOfDay) {
+      const [hours, minutes] = startTime.split(":");
+      const endHours = (parseInt(hours) + 2) % 24;
+
+      endTime = `${endHours.toString().padStart(2, "0")}:${minutes}`;
+    }
 
     // Mixed Levels Detection
     if (
@@ -244,8 +271,75 @@ export function CreateScheduleBlockModal({
       dedicated_skill_max: dedicatedSkillMax,
       dedicated_skill_label: dedicatedSkillLabel,
       special_event_name: specialEventName,
+      start_time: startTime,
+      end_time: endTime,
     };
   };
+
+  // Check for conflicts when scheduling fields change
+  const checkForConflicts = async () => {
+    // Only check if we have the required fields
+    if (
+      formData.days_of_week.length === 0 ||
+      !formData.start_time ||
+      !formData.end_time ||
+      !formData.effective_from ||
+      !formData.effective_until
+    ) {
+      setConflicts(null);
+
+      return;
+    }
+
+    const courtAllocations = generateCourtAllocations();
+
+    // Don't check if no courts allocated (mixed sessions)
+    if (courtAllocations.length === 0) {
+      setConflicts(null);
+
+      return;
+    }
+
+    setCheckingConflicts(true);
+    try {
+      const result = await checkScheduleConflicts({
+        days_of_week: formData.days_of_week,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        effective_from: formData.effective_from,
+        effective_until: formData.effective_until,
+        court_allocations: courtAllocations,
+      });
+
+      if (result.success && result.has_conflicts) {
+        setConflicts(result.conflicts || []);
+      } else {
+        setConflicts(null);
+      }
+    } catch (error) {
+      console.error("Error checking conflicts:", error);
+      setConflicts(null);
+    } finally {
+      setCheckingConflicts(false);
+    }
+  };
+
+  // Trigger conflict checking when relevant fields change
+  useEffect(() => {
+    // Debounce the conflict check to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      checkForConflicts();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    formData.days_of_week,
+    formData.start_time,
+    formData.end_time,
+    formData.effective_from,
+    formData.effective_until,
+    formData.name,
+  ]);
 
   // Generate court allocations based on session name
   const generateCourtAllocations = () => {
@@ -254,37 +348,37 @@ export function CreateScheduleBlockModal({
     );
     const sessionName = formData.name.toLowerCase();
 
-    // For Beginner sessions: all courts assigned to Beginner (2.5-3.0)
+    // For Beginner sessions: all courts assigned to Beginner (2.0-3.0)
     if (sessionName.includes("beginner")) {
       return indoorCourts.map((court, index) => ({
         court_id: court.id,
-        skill_level_min: 2.5,
+        skill_level_min: 2.0,
         skill_level_max: 3.0,
-        skill_level_label: "Beginner (2.5-3.0)",
+        skill_level_label: "Beginner (2.0-3.0)",
         is_mixed_level: false,
         sort_order: index,
       }));
     }
 
-    // For Intermediate sessions: all courts assigned to Intermediate (3.0-3.8)
+    // For Intermediate sessions: all courts assigned to Intermediate (3.0-4.5)
     if (sessionName.includes("intermediate")) {
       return indoorCourts.map((court, index) => ({
         court_id: court.id,
         skill_level_min: 3.0,
-        skill_level_max: 3.8,
-        skill_level_label: "Intermediate (3.0-3.8)",
+        skill_level_max: 4.5,
+        skill_level_label: "Intermediate (3.0-4.5)",
         is_mixed_level: false,
         sort_order: index,
       }));
     }
 
-    // For Advanced sessions: all courts assigned to Advanced (4.0+)
+    // For Advanced sessions: all courts assigned to Advanced (4.5+)
     if (sessionName.includes("advanced")) {
       return indoorCourts.map((court, index) => ({
         court_id: court.id,
-        skill_level_min: 4.0,
+        skill_level_min: 4.5,
         skill_level_max: undefined,
-        skill_level_label: "Advanced (4.0+)",
+        skill_level_label: "Advanced (4.5+)",
         is_mixed_level: false,
         sort_order: index,
       }));
@@ -442,6 +536,10 @@ export function CreateScheduleBlockModal({
                             special_event_name:
                               sessionConfig.special_event_name ||
                               formData.special_event_name,
+                            start_time:
+                              sessionConfig.start_time || formData.start_time,
+                            end_time:
+                              sessionConfig.end_time || formData.end_time,
                           });
                         }
                       }}
@@ -595,14 +693,20 @@ export function CreateScheduleBlockModal({
                   <div className="space-y-4">
                     <Input
                       isRequired
-                      description="End time will be automatically set to 2 hours after start time"
-                      label="Start Time"
+                      description="End time will be automatically set to 2 hours after start time. Times are in CST (24-hour format)."
+                      label="Start Time (CST 24-hour)"
                       labelPlacement="outside"
+                      placeholder="14:00"
                       type="time"
                       value={formData.start_time}
                       variant="bordered"
                       onChange={(e) => {
                         const startTime = e.target.value;
+
+                        // Validate 24-hour format
+                        if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(startTime)) {
+                          return;
+                        }
                         // Calculate end time as 2 hours after start time
                         const [hours, minutes] = startTime.split(":");
                         const endHours = (parseInt(hours) + 2) % 24;
@@ -626,7 +730,7 @@ export function CreateScheduleBlockModal({
                           Session Duration: 2 Hours
                         </p>
                         <p className="text-xs text-dink-white/60">
-                          End time: {formData.end_time}
+                          End time: {formData.end_time} CST
                         </p>
                       </div>
                     </div>
@@ -795,6 +899,101 @@ export function CreateScheduleBlockModal({
 
                 <Divider className="bg-dink-gray/20" />
 
+                {/* Conflict Warning */}
+                {checkingConflicts && (
+                  <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        className="text-yellow-400 animate-spin"
+                        icon="solar:refresh-linear"
+                        width={20}
+                      />
+                      <p className="text-sm text-yellow-300">
+                        Checking for scheduling conflicts...
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {!checkingConflicts && conflicts && conflicts.length > 0 && (
+                  <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/30">
+                    <div className="flex items-start gap-3">
+                      <Icon
+                        className="text-red-400 mt-0.5"
+                        icon="solar:danger-triangle-bold"
+                        width={20}
+                      />
+                      <div className="space-y-2 flex-1">
+                        <h4 className="text-sm font-semibold text-red-300">
+                          Scheduling Conflicts Detected
+                        </h4>
+                        <p className="text-xs text-dink-white/80">
+                          The following events overlap with your selected
+                          time/courts:
+                        </p>
+                        <div className="space-y-2 mt-2">
+                          {conflicts.map((conflict, idx) => {
+                            const dayName = [
+                              "Sunday",
+                              "Monday",
+                              "Tuesday",
+                              "Wednesday",
+                              "Thursday",
+                              "Friday",
+                              "Saturday",
+                            ][conflict.day_of_week];
+
+                            return (
+                              <div
+                                key={idx}
+                                className="p-3 bg-black/20 rounded border border-red-500/20"
+                              >
+                                <p className="text-sm font-semibold text-red-300 mb-1">
+                                  {dayName}
+                                </p>
+                                {conflict.conflicting_events.map(
+                                  (event: any, eventIdx: number) => (
+                                    <div
+                                      key={eventIdx}
+                                      className="text-xs text-dink-white/70 ml-2"
+                                    >
+                                      • {event.title} (
+                                      {event.recurrence_pattern?.start_time} -{" "}
+                                      {event.recurrence_pattern?.end_time})
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-red-300 mt-3">
+                          ⚠️ You cannot create this schedule block due to these
+                          conflicts. Please adjust the days, times, or date
+                          range.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!checkingConflicts && !conflicts && formData.name && (
+                  <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        className="text-green-400"
+                        icon="solar:check-circle-bold"
+                        width={20}
+                      />
+                      <p className="text-sm text-green-300">
+                        No scheduling conflicts detected
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Divider className="bg-dink-gray/20" />
+
                 {/* Special Instructions */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-dink-white flex items-center gap-2">
@@ -830,7 +1029,9 @@ export function CreateScheduleBlockModal({
                 isDisabled={
                   !formData.name.trim() ||
                   formData.days_of_week.length === 0 ||
-                  !formData.effective_until
+                  !formData.effective_until ||
+                  (conflicts && conflicts.length > 0) ||
+                  checkingConflicts
                 }
                 isLoading={loading}
                 startContent={

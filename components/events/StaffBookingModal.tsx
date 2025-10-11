@@ -36,6 +36,7 @@ import {
 } from "@/app/dashboard/session_booking/actions";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/notifications";
+import { toCSTString, internationalizedToCST } from "@/lib/time-utils";
 
 interface Player {
   id: string;
@@ -222,20 +223,9 @@ export function StaffBookingModal({
 
     setCheckingAvailability(true);
     try {
-      const startDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        startTime.hour,
-        startTime.minute,
-      );
-      const endDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        endTime.hour,
-        endTime.minute,
-      );
+      // Convert @internationalized/date values to CST Date objects
+      const startDateTime = internationalizedToCST(date, startTime);
+      const endDateTime = internationalizedToCST(date, endTime);
 
       const result = await checkCourtAvailability(startDateTime, endDateTime);
 
@@ -271,20 +261,9 @@ export function StaffBookingModal({
 
     setSubmitting(true);
     try {
-      const startDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        startTime.hour,
-        startTime.minute,
-      );
-      const endDateTime = new Date(
-        date.year,
-        date.month - 1,
-        date.day,
-        endTime.hour,
-        endTime.minute,
-      );
+      // Convert @internationalized/date values to CST Date objects
+      const startDateTime = internationalizedToCST(date, startTime);
+      const endDateTime = internationalizedToCST(date, endTime);
 
       // If this is a court booking (private_lesson), create booking differently
       if (eventType === "private_lesson") {
@@ -297,16 +276,10 @@ export function StaffBookingModal({
             `${eventType.replace("_", " ").toUpperCase()} - ${date.toString()}`,
           description,
           event_type: eventType,
-          start_time: startDateTime.toISOString(),
-          end_time: endDateTime.toISOString(),
+          start_time: toCSTString(startDateTime),
+          end_time: toCSTString(endDateTime),
           check_in_time: checkInTime
-            ? new Date(
-                date.year,
-                date.month - 1,
-                date.day,
-                checkInTime.hour,
-                checkInTime.minute,
-              ).toISOString()
+            ? toCSTString(internationalizedToCST(date, checkInTime))
             : undefined,
           court_ids: selectedCourtIds,
           max_capacity: maxCapacity,
@@ -325,13 +298,12 @@ export function StaffBookingModal({
             other: otherSetupRequirements ? [otherSetupRequirements] : [],
           },
           registration_deadline: registrationDeadline
-            ? new Date(
-                registrationDeadline.year,
-                registrationDeadline.month - 1,
-                registrationDeadline.day,
-                registrationDeadline.hour || 23,
-                registrationDeadline.minute || 59,
-              ).toISOString()
+            ? toCSTString(
+                internationalizedToCST(registrationDeadline, {
+                  hour: registrationDeadline.hour || 23,
+                  minute: registrationDeadline.minute || 59,
+                }),
+              )
             : undefined,
         };
 
@@ -368,30 +340,56 @@ export function StaffBookingModal({
         : availablePlayers.find((p) => p.account_id === selectedPlayerId)
             ?.first_name || "Guest";
 
+      // Build court allocations JSONB array
+      let courtAllocations: any[] = [];
+
+      if (selectedCourtIds.length > 0) {
+        // Fetch court details to build the JSONB structure
+        const { data: courtsData, error: courtsError } = await supabase
+          .schema("events")
+          .from("courts")
+          .select("id, court_number, name, surface_type")
+          .in("id", selectedCourtIds);
+
+        if (courtsError) throw courtsError;
+
+        // Build court allocations JSONB array
+        courtAllocations = selectedCourtIds.map((courtId, index) => {
+          const court = courtsData?.find((c: any) => c.id === courtId);
+
+          return {
+            court_id: courtId,
+            court_number: court?.court_number || 0,
+            court_name: court?.name || `Court ${court?.court_number || "?"}`,
+            surface_type: court?.surface_type,
+            is_primary: index === 0,
+            skill_level_min: null,
+            skill_level_max: null,
+            skill_level_label: null,
+            is_mixed_level: false,
+            sort_order: index,
+          };
+        });
+      }
+
       const { data: event, error: eventError } = await supabase
+        .schema("events")
         .from("events")
         .insert({
           title: title || `Court Booking - ${playerName}`,
           event_type: "private_lesson",
-          start_time: startDateTime.toISOString(),
-          end_time: endDateTime.toISOString(),
+          start_time: toCSTString(startDateTime),
+          end_time: toCSTString(endDateTime),
           max_capacity: 4,
           price_member: priceMember,
           is_published: false,
+          court_allocations: courtAllocations,
+          player_registrations: [],
         })
         .select()
         .single();
 
       if (eventError) throw eventError;
-
-      // Link courts to event
-      const courtLinks = selectedCourtIds.map((courtId, index) => ({
-        event_id: event.id,
-        court_id: courtId,
-        is_primary: index === 0,
-      }));
-
-      await supabase.from("event_courts").insert(courtLinks);
 
       // Create booking via RPC
       const { data: booking, error: bookingError } = await supabase.rpc(
@@ -437,12 +435,12 @@ export function StaffBookingModal({
     setOtherSetupRequirements("");
   };
 
-  const indoorCourts = courtAvailability.filter(
-    (ca) => ca.court.surface_type === "indoor",
-  );
-  const outdoorCourts = courtAvailability.filter(
-    (ca) => ca.court.surface_type !== "indoor",
-  );
+  const indoorCourts = courtAvailability
+    .filter((ca) => ca.court.surface_type === "indoor")
+    .sort((a, b) => a.court.court_number - b.court.court_number);
+  const outdoorCourts = courtAvailability
+    .filter((ca) => ca.court.surface_type !== "indoor")
+    .sort((a, b) => a.court.court_number - b.court.court_number);
 
   return (
     <Modal
@@ -644,6 +642,36 @@ export function StaffBookingModal({
                     </span>
                   )}
                 </div>
+
+                {/* No Courts Warning */}
+                {!checkingAvailability &&
+                  courtAvailability.length === 0 &&
+                  date &&
+                  startTime &&
+                  endTime && (
+                    <Card className="bg-yellow-500/10 border border-yellow-500/30">
+                      <CardBody className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Icon
+                            className="text-yellow-500 mt-0.5"
+                            icon="solar:danger-triangle-linear"
+                            width={24}
+                          />
+                          <div>
+                            <h4 className="text-sm font-semibold text-yellow-500 mb-1">
+                              No Courts Available
+                            </h4>
+                            <p className="text-xs text-dink-white/70">
+                              No courts were found in the system or none have
+                              &apos;available&apos; status. Please contact an
+                              administrator to set up courts before creating
+                              bookings.
+                            </p>
+                          </div>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  )}
 
                 {/* Indoor Courts */}
                 <div>
